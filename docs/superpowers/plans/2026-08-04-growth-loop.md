@@ -984,7 +984,7 @@ git commit -m "feat: add gl-nudge advisory persistence nudge"
 
 **Interfaces:**
 - Consumes: `fixtures.run`, `fixtures.tmpdir`, `fixtures.write_skill`.
-- Produces: CLI contract `gl-journey [--stale N] [--home PATH]`. Exit 0 always. Sections in order: `SKILLS`, `MEMORY`, `LEDGER`, then a closing review prompt. Honours `GROWTH_LOOP_SKILL_ROOTS` (`os.pathsep`-separated) for testability.
+- Produces: CLI contract `gl-journey [--stale N]`. The state directory is set by `GROWTH_LOOP_HOME`, not by a flag — spec §5.6 gives `gl-journey` no path arguments, and the env var is already the documented override. Exit 0 always. Sections in order: `SKILLS`, `MEMORY`, `LEDGER`, then a closing review prompt. Honours `GROWTH_LOOP_SKILL_ROOTS` (`os.pathsep`-separated) for testability.
 
 - [ ] **Step 1: Write the failing test**
 
