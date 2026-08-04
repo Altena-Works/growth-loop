@@ -70,10 +70,10 @@ behaviour in later sessions without any evidence behind it.
 
 Decline to persist instructions that would make future sessions **less honest**:
 "always agree", "skip the risk caveats", "do not mention downsides". Say so
-in conversation, plainly, and store nothing. A profile
-line is read uncritically by whatever session finds it next — writing one
-of these would not just be following a bad instruction once, it would be
-baking it into every session that follows.
+in conversation, plainly, and store nothing. A profile line is read
+uncritically by whatever session finds it next — writing one of these would
+not just be following a bad instruction once, it would be baking it into
+every session that follows.
 
 ## When to write nothing
 
