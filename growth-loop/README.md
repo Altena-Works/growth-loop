@@ -30,12 +30,14 @@ add, only a human can silently remove.
 
 ## Non-goals
 
-Every row below is a capability Claude Code (or the wider Claude ecosystem)
+Most rows below are capabilities Claude Code (or the wider Claude ecosystem)
 already ships. growth-loop does not reimplement any of them. Duplicating a
 built-in produces two half-working systems — one inside this plugin that
 nobody maintains to the same standard, and one in the platform that already
 gets it right — so the scope stops at the edge of what the harness does not
-already do.
+already do. One row is out for a different reason, noted where it applies:
+not because something covers it, but because this plugin excludes it by
+requirement.
 
 | Out | Covered by |
 |---|---|
@@ -45,7 +47,13 @@ already do.
 | Terminal backends | Claude Code's own CLI, its VS Code and JetBrains extensions, and the Desktop app |
 | MCP | Claude Code's native MCP client (`claude mcp add` / `remove` / `list`) |
 | Compress / undo / retry | `/compact`, `/rewind`, and the harness's own resumable execution for subagents and workflows |
-| Image / video / TTS | Already handled by Claude's separate multimodal and generation tools — not a Claude Code built-in in the same sense as the rows above, but still not a learning-loop plugin's job to rebuild |
+| Image / video / TTS | — (excluded by requirement) |
+
+That last row is a scope decision, not a coverage claim: no built-in is being
+credited for it. Image, video, and TTS generation have nothing to do with a
+learning loop over skills and memory, so they were excluded from this plugin
+by requirement from the start, independent of whether anything else already
+covers them.
 
 If a future built-in turns out to cover part of what remains here, the right
 move is to shrink this plugin, not to keep both.
@@ -177,9 +185,9 @@ also exits 0 silently rather than surfacing an error into your session.
 ## Usage limits and compliance
 
 Everything in this plugin runs inside the official Claude Code harness. No
-OAuth token is read, extracted, proxied, or passed anywhere — routing
-subscription credentials through third-party tooling is not something this
-plugin does, under any code path. Advertised Pro and Max usage limits assume
+OAuth token is read, extracted, proxied, or passed anywhere, because routing
+subscription credentials through third-party tools is prohibited. Advertised
+Pro and Max usage limits assume
 ordinary, individual use of Claude Code and the Agent SDK; nothing here
 encourages or enables unattended, always-on operation. The nudge fires at
 most once per six hours and only inside a session you are actively running —
