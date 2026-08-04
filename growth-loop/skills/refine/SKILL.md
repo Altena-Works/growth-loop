@@ -64,6 +64,11 @@ If more than half the skill is wrong — built on an assumption that no
 longer holds, or patched so many times that the throughline is gone — stop
 editing and route to `/growth-loop:forget` instead.
 
+`forget` carries `disable-model-invocation: true` — you cannot invoke it
+yourself. Routing to it means presenting the skill and why it is beyond
+repair, then stopping: let the person run `/growth-loop:forget` themselves.
+Do not delete the directory yourself as a shortcut around that gate.
+
 **Beyond repair is a real verdict, not a failure to fix it well enough.** A
 heavily patched skill built on a dead assumption still reads as
 authoritative to whoever finds it next, and that is worse than no skill at

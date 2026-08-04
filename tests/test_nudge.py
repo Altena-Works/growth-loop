@@ -80,6 +80,26 @@ class TestNudge(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out.strip(), "")
 
+    def test_todowrite_does_not_count_as_an_edit(self):
+        readonly = write_transcript(self.work / "investigation.jsonl",
+                                    "explore the failure", "found it",
+                                    tool_calls=22, tool_name="Read",
+                                    file_paths=["/r/a.py"])
+        todos = write_transcript(self.work / "todos.jsonl", "plan it", "planned",
+                                 tool_calls=3, tool_name="TodoWrite", file_paths=())
+        # Splice the TodoWrite calls onto the end of the read-only transcript:
+        # 22 reads + 3 TodoWrite calls crosses MIN_TOOL_CALLS (25) but must
+        # still count zero edits, since neither tool touches a file.
+        combined = self.work / "combined.jsonl"
+        combined.write_text(
+            readonly.read_text(encoding="utf-8").rstrip("\n") + "\n" +
+            todos.read_text(encoding="utf-8"), encoding="utf-8")
+        code, out, _ = run("gl-nudge", [], env=self.env,
+                           stdin=hook_payload(combined, "Stop"))
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "")
+        self.assertFalse((self.home / "ledger.jsonl").exists())
+
     def test_missing_stdin_exits_zero_silently(self):
         code, out, err = run("gl-nudge", [], env=self.env, stdin="")
         self.assertEqual(code, 0)

@@ -21,7 +21,11 @@ Every item `gl-journey --stale 60` surfaces gets exactly one of three
 verdicts. No undecided leftovers.
 
 - **Delete** — it no longer applies, or should never have been written.
-  Route it to `/growth-loop:forget`.
+  Route it to `/growth-loop:forget`. `forget` carries
+  `disable-model-invocation: true`, so this routing is a recommendation in
+  the report, not an action you take: name what should go and why, then let
+  the person invoke `/growth-loop:forget` themselves. Do not delete the
+  directory yourself instead.
 - **Verify and correct** — the knowledge underneath it might still hold but
   has not been checked in a while. Check it against reality now, then route
   the fix through `/growth-loop:refine`.

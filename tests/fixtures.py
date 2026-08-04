@@ -51,11 +51,16 @@ def tmpdir():
 
 
 def write_transcript(path, user_text, assistant_text, tool_calls=0,
-                     tool_name="Edit", file_paths=()):
+                     tool_name="Edit", file_paths=None):
     """Write a synthetic JSONL transcript.
 
     Emits one user turn, one assistant text turn, then `tool_calls` tool_use
     blocks cycling through `file_paths`, then one deliberately corrupt line.
+
+    `file_paths=None` (the default) stands in a placeholder path for every
+    call, as if each one touched a file. Pass `file_paths=()` explicitly to
+    model a tool whose input carries no `file_path` at all — e.g. TodoWrite,
+    which mutates nothing.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -64,11 +69,14 @@ def write_transcript(path, user_text, assistant_text, tool_calls=0,
         {"type": "assistant", "message": {"role": "assistant",
                                           "content": [{"type": "text", "text": assistant_text}]}},
     ]
-    paths = list(file_paths) or ["/tmp/a.py"]
+    paths = list(file_paths) if file_paths is not None else ["/tmp/a.py"]
     for i in range(tool_calls):
+        input_payload = {"old_string": "x", "new_string": "y"}
+        if paths:
+            input_payload = {"file_path": paths[i % len(paths)], **input_payload}
         lines.append({"type": "assistant", "message": {"role": "assistant", "content": [{
             "type": "tool_use", "name": tool_name, "id": "t%d" % i,
-            "input": {"file_path": paths[i % len(paths)], "old_string": "x", "new_string": "y"},
+            "input": input_payload,
         }]}})
     with open(path, "w", encoding="utf-8") as fh:
         for rec in lines:

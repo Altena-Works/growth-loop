@@ -11,9 +11,18 @@ import sys
 import time
 from pathlib import Path
 
-# Where skills are discovered when GROWTH_LOOP_SKILL_ROOTS is unset. Changing
-# this changes what a real (non-test) invocation scans on this machine.
-SKILL_ROOTS = ("~/.claude/skills", "~/.claude/plugins", "./.claude/skills")
+# Where skills are discovered when GROWTH_LOOP_SKILL_ROOTS is unset. These two
+# cover exactly what the learning loop itself writes: user skills and a
+# project-local skills dir. Widening this to ~/.claude/plugins (the original
+# spec's third root) pulls in every installed plugin's SKILL.md files — on a
+# populated machine that is a 20x-plus flood of vendor files the loop did not
+# produce and cannot delete, each one double-counted because cache/ and
+# marketplaces/ checkouts are separate inodes the resolve()-based dedup below
+# does not collapse. That flood breaks journey's forced three-way verdict,
+# feeds bogus pairs to the duplicate hunt, and turns forget's directory
+# delete into a way to destroy an installed plugin. Anyone who wants the
+# wider sweep anyway can still get it via GROWTH_LOOP_SKILL_ROOTS.
+SKILL_ROOTS = ("~/.claude/skills", "./.claude/skills")
 # Memory files always checked in addition to <home>/profile.md. Adding one
 # widens the MEMORY section for every run, test fixtures included.
 MEMORY_FILES = ("~/.claude/CLAUDE.md", "./CLAUDE.md")

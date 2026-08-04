@@ -62,20 +62,27 @@ move is to shrink this plugin, not to keep both.
 
 ```bash
 git clone <repo> growth-loop
-chmod +x growth-loop/bin/*        # required — the Stop hook depends on it
-claude --plugin-dir ./growth-loop
+cd growth-loop/growth-loop
+chmod +x bin/*                    # required — the Stop hook depends on it
+claude --plugin-dir .
 ```
+
+The repo nests the plugin one level down — this checkout's own `bin/` lives
+at `growth-loop/bin/` relative to the repo root, not at the root itself — so
+`cd` into the inner `growth-loop/` before touching `chmod` or pointing
+`--plugin-dir` anywhere.
 
 `chmod +x` is not boilerplate. The `Stop` hook invokes `bin/gl-nudge` as a
 bare command; without the executable bit it fails to launch and the nudge
 silently never fires — there is no error, just a plugin that appears
 installed and does nothing.
 
-Alternatively, `claude plugin init growth-loop` scaffolds a plugin directly
-into `~/.claude/skills/growth-loop/`, where it autoloads next session as
-`growth-loop@skills-dir` with no explicit install step. If you edit plugin
-files while a session is already running, run `/reload-plugins` to pick up
-the change without restarting.
+Note: `claude plugin init growth-loop` is not an alternative install path
+for this plugin. It scaffolds a *new, empty* plugin skeleton at
+`~/.claude/skills/growth-loop/`, which would collide by name with the one
+above — it exists for authoring a plugin from scratch, not for installing
+this one. If you edit plugin files while a session is already running, run
+`/reload-plugins` to pick up the change without restarting.
 
 ## Verify
 
@@ -117,6 +124,12 @@ State lives outside the plugin, in `~/.claude/growth-loop/` — `profile.md`,
 Distilled skills are written to `~/.claude/skills/<slug>/SKILL.md`, not
 inside this plugin, so they load globally across every project and survive
 this plugin being removed.
+
+`gl-journey` scans `~/.claude/skills` and `./.claude/skills` for `SKILL.md`
+files by default — exactly where the learning loop writes and nowhere else,
+so a review never surfaces someone else's installed plugins alongside your
+own distilled skills. Override the sweep with `GROWTH_LOOP_SKILL_ROOTS`, an
+`os.pathsep`-separated list of roots, if you deliberately want a wider scan.
 
 ## Tuning
 
