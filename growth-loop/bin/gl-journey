@@ -17,7 +17,10 @@ SKILL_ROOTS = ("~/.claude/skills", "~/.claude/plugins", "./.claude/skills")
 # Memory files always checked in addition to <home>/profile.md. Adding one
 # widens the MEMORY section for every run, test fixtures included.
 MEMORY_FILES = ("~/.claude/CLAUDE.md", "./CLAUDE.md")
-STALE_DAYS = 90              # tunable: age at which a skill needs a verdict
+# Age at which a skill needs a verdict. Raising it silences skills that
+# would otherwise be flagged for review; lowering it floods the SKILLS list
+# with false positives and trains the reader to skim past the flag.
+STALE_DAYS = 90
 # Fallback for GROWTH_LOOP_HOME. Changing this moves where a real run looks
 # for profile.md and ledger.jsonl when the env var is unset.
 DEFAULT_HOME = "~/.claude/growth-loop"
