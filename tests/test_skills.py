@@ -145,5 +145,59 @@ class TestSkillAuthorAgent(unittest.TestCase):
         self.assertIn("What goes wrong", self.body)
 
 
+class TestRecall(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "recall" / "SKILL.md")
+
+    def test_runs_gl_recall(self):
+        self.assertIn("gl-recall", self.body)
+
+    def test_teaches_reading_the_hits(self):
+        for cue in ("newest session first", "resolution", "decided"):
+            self.assertIn(cue, self.body)
+
+    def test_never_dumps_raw_output(self):
+        self.assertIn("conclusion first", self.body.lower())
+
+    def test_empty_state_directs_to_the_env_var(self):
+        self.assertIn("CLAUDE_TRANSCRIPT_DIR", self.body)
+
+    def test_closes_the_loop_to_persistence(self):
+        self.assertIn("searched twice", self.body)
+
+
+class TestProfile(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "profile" / "SKILL.md")
+
+    def test_names_the_file(self):
+        self.assertIn("~/.claude/growth-loop/profile.md", self.body)
+
+    def test_has_the_three_sections(self):
+        for section in ("Tooling", "Conventions", "Working style"):
+            self.assertIn(section, self.body)
+
+    def test_states_the_three_month_test(self):
+        self.assertIn("three months", self.body)
+
+    def test_states_the_second_occurrence_rule(self):
+        self.assertIn("second occurrence", self.body)
+
+    def test_states_the_line_cap(self):
+        self.assertIn("60 lines", self.body)
+
+    def test_carries_the_privacy_exclusions(self):
+        for excluded in ("health", "finances", "relationships", "politics", "inferred"):
+            self.assertIn(excluded, self.body.lower())
+
+    def test_refuses_honesty_degrading_instructions(self):
+        self.assertIn("less honest", self.body)
+
+    def test_never_announces_the_write(self):
+        self.assertIn("Never announce", self.body)
+
+
 if __name__ == "__main__":
     unittest.main()
