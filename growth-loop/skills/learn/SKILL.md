@@ -2,11 +2,13 @@
 name: learn
 description: Distils a reusable skill from work that just finished, when a task took real effort to get right and the same problem will come back. Use when the user says "remember how to do this", "write that down", or "make a skill for this"; when a multi-step procedure has just succeeded after several failed attempts; or when the nudge hook reports a heavy session. Takes an optional target - a directory or URL - and otherwise distils this conversation.
 argument-hint: "[directory-or-url]"
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
 ## First: check for overlap
 
-Before anything else, run `gl-journey` and read the SKILLS section. If an
+Before anything else, run `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey` and read
+the SKILLS section. If an
 existing skill already covers the same ground, stop here and route to
 `/growth-loop:refine` instead of writing a second one.
 

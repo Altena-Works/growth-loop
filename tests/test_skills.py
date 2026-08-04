@@ -91,7 +91,10 @@ class TestLearn(unittest.TestCase):
         self.meta, self.body = parse_frontmatter(self.path)
 
     def test_runs_journey_first_and_routes_to_refine_on_overlap(self):
-        self.assertIn("gl-journey", self.body)
+        # Bare `gl-journey` is not on the Bash tool's PATH inside a plugin
+        # skill (measured empirically) - it must be invoked by explicit
+        # path so the assertion has to pin that form, not just the substring.
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey', self.body)
         self.assertIn("/growth-loop:refine", self.body)
 
     def test_states_the_three_way_gate(self):
@@ -151,7 +154,9 @@ class TestRecall(unittest.TestCase):
             PLUGIN_ROOT / "skills" / "recall" / "SKILL.md")
 
     def test_runs_gl_recall(self):
-        self.assertIn("gl-recall", self.body)
+        # Explicit path required - bare `gl-recall` is not on PATH inside a
+        # plugin skill (measured empirically); see recall/SKILL.md.
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall', self.body)
 
     def test_teaches_reading_the_hits(self):
         for cue in ("newest session first", "resolution", "decided"):
@@ -208,8 +213,10 @@ class TestJourneySkill(unittest.TestCase):
         self.assertEqual(self.meta.get("disable-model-invocation"), "true")
 
     def test_runs_both_journey_invocations(self):
-        self.assertIn("gl-journey", self.body)
-        self.assertIn("--stale 60", self.body)
+        # Explicit path required - bare `gl-journey` is not on PATH inside a
+        # plugin skill (measured empirically).
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey', self.body)
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --stale 60', self.body)
 
     def test_forces_a_three_way_verdict(self):
         for verdict in ("delete", "verify", "keep"):
@@ -246,6 +253,32 @@ class TestForget(unittest.TestCase):
 
     def test_asks_first_on_ambiguous_scope(self):
         self.assertIn("ambiguous", self.body.lower())
+
+    def test_locates_via_explicit_journey_path(self):
+        # Explicit path required - bare `gl-journey` is not on PATH inside a
+        # plugin skill (measured empirically).
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey', self.body)
+
+
+class TestScriptInvocationAllowedTools(unittest.TestCase):
+    """The four skills that shell out to a bin/ script must pin an
+    allowed-tools rule on the same ${CLAUDE_PLUGIN_ROOT} path they invoke in
+    the body, or every invocation stops for a permission prompt."""
+
+    CASES = {
+        "learn": "gl-journey",
+        "recall": "gl-recall",
+        "journey": "gl-journey",
+        "forget": "gl-journey",
+    }
+
+    def test_allowed_tools_matches_the_invoked_path(self):
+        for name, script in self.CASES.items():
+            path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+            meta, _ = parse_frontmatter(path)
+            allowed = meta.get("allowed-tools", "")
+            self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/%s' % script, allowed,
+                          "%s: allowed-tools does not cover %s" % (name, script))
 
 
 if __name__ == "__main__":

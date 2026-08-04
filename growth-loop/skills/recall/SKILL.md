@@ -2,13 +2,15 @@
 name: recall
 description: Recovers context from past Claude Code sessions by searching transcripts. Use when the user refers to earlier work without restating it - "how did we fix that", "what was the workaround", "we decided something about this" - or when a task resumes and the reasoning behind the current state is not in context. Searches deterministically outside the model, then summarises.
 argument-hint: "[what to search for]"
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall:*)
 ---
 
 ## Search
 
-Run `gl-recall "<query>"`. Start with the user's own words — the phrase they
-just used is the one most likely to appear in the transcript that recorded
-it. If the memory is old, widen the window with `--days 365`; the default
+Run `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall "<query>"`. Start with the user's
+own words — the phrase they just used is the one most likely to appear in
+the transcript that recorded it. If the memory is old, widen the window with
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall "<query>" --days 365`; the default
 window is shorter and will miss it.
 
 If the first pass comes back thin, widen the query with the concrete strings
@@ -40,7 +42,8 @@ your answer.
 
 ## When nothing is found
 
-Before reporting a dead end, run `gl-recall --list-roots`. If it reports no
+Before reporting a dead end, run
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall --list-roots`. If it reports no
 root, the search never actually ran — say so, and give the remedy: set
 `CLAUDE_TRANSCRIPT_DIR` to the directory holding the `.jsonl` session files,
 then search again. Do not report "no history" when the real problem is that

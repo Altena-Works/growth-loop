@@ -72,10 +72,11 @@ at `growth-loop/bin/` relative to the repo root, not at the root itself — so
 `cd` into the inner `growth-loop/` before touching `chmod` or pointing
 `--plugin-dir` anywhere.
 
-`chmod +x` is not boilerplate. The `Stop` hook invokes `bin/gl-nudge` as a
-bare command; without the executable bit it fails to launch and the nudge
-silently never fires — there is no error, just a plugin that appears
-installed and does nothing.
+`chmod +x` is not boilerplate. The `Stop` hook invokes
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-nudge` directly by path; without the
+executable bit it still fails to launch and the nudge silently never fires
+— there is no error, just a plugin that appears installed and does
+nothing.
 
 Note: `claude plugin init growth-loop` is not an alternative install path
 for this plugin. It scaffolds a *new, empty* plugin skeleton at
@@ -88,19 +89,33 @@ this one. If you edit plugin files while a session is already running, run
 
 ```bash
 claude plugin validate .               # manifest + frontmatter + hooks schema
-gl-recall --list-roots                 # must print at least one root
-gl-journey                             # inventory
+./bin/gl-recall --list-roots           # must print at least one root
+./bin/gl-journey                       # inventory
 ```
 
-Run `claude plugin validate` from the same directory the install block left
-you in — the inner `growth-loop/growth-loop/`, where `.claude-plugin/`
-actually lives — not the outer clone. `gl-recall` and `gl-journey` are not
-cwd-sensitive the same way: once the plugin is enabled, Claude Code adds
-`bin/` to the Bash tool's `PATH`, so those two run as bare commands inside
-a session regardless of cwd.
+Run both commands from the same directory the install block left you in —
+the inner `growth-loop/growth-loop/`, where `.claude-plugin/` and `bin/`
+actually live.
+
+**`bin/` is not added to the Bash tool's `PATH`.** That was the plan going
+in, but measuring it in a live session showed otherwise: with only this
+plugin's manifest and `bin/` on disk, `gl-recall`, `gl-nudge`, and
+`gl-journey` all come back `command not found` (exit 127) when invoked bare,
+and `which` finds none of them. This reproduces with a minimal throwaway
+plugin containing nothing but a manifest and one `bin/` script, so it is
+general `--plugin-dir` behaviour, not specific to this plugin.
+
+Because of that, every skill in this plugin invokes its script by explicit
+path — `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall`, `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey`
+— which does substitute correctly inside a skill's markdown body and inside
+its `allowed-tools` frontmatter. If you are running one of these scripts by
+hand from a plain shell rather than through a skill, `$CLAUDE_PLUGIN_ROOT`
+is not set for you either, so use the path under wherever you installed the
+plugin, e.g. `~/.claude/plugins/.../growth-loop/bin/gl-recall`, or `./bin/gl-recall`
+from inside this directory as shown above.
 
 Inside a session, `/hooks` should show `gl-nudge` registered on both `Stop`
-and `SessionEnd`. If `gl-recall --list-roots` finds nothing, set
+and `SessionEnd`. If `--list-roots` finds nothing, set
 `CLAUDE_TRANSCRIPT_DIR` to the directory holding your `.jsonl` session files
 — transcript storage locations drift between platforms and versions, and
 autodiscovery only covers the well-known ones.

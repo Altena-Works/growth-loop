@@ -3,6 +3,7 @@ name: forget
 description: Deletes a skill or a profile entry completely, after showing exactly what will be removed and getting confirmation. Use when the user says "forget that", "delete that skill", or "that is no longer true". Deletion is a human decision, so this skill is never invoked automatically.
 argument-hint: "[what to forget]"
 disable-model-invocation: true
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
 ## Locate
@@ -10,7 +11,8 @@ disable-model-invocation: true
 Resolve `$ARGUMENTS` to one concrete target — a skill directory or a
 specific profile line. If the reference is by topic rather than by name
 ("that skill about migrations" instead of "the migrations skill"), run
-`gl-journey` and match against its listing instead of guessing from memory.
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey` and match against its listing
+instead of guessing from memory.
 
 If the scope is ambiguous — several matches, or it is unclear whether the
 user means a skill or a profile line — ask before touching anything. A

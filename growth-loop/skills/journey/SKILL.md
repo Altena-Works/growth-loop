@@ -2,11 +2,13 @@
 name: journey
 description: Reviews everything the learning loop has accumulated - skills, memory files, the nudge ledger - and forces a verdict on each stale item. Run this deliberately, about monthly, or when the skill library has grown past the point where you can name what is in it. Review is a human decision, so this skill is never invoked automatically.
 disable-model-invocation: true
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
 ## Gather
 
-Run `gl-journey`, then run `gl-journey --stale 60`. The first pass is the
+Run `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey`, then run
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --stale 60`. The first pass is the
 full inventory — every skill, the memory files, the nudge ledger. The
 second narrows to what is actually due: items older than 60 days, well
 short of the 90-day staleness flag, so the review catches things before

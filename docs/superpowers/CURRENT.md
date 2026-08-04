@@ -1,6 +1,6 @@
 # growth-loop — 現状
 
-最終更新: 2026-08-04
+最終更新: 2026-08-05
 
 ## これは何か
 
@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了。ブランチ `feat/growth-loop`、HEAD は `c816388`。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **84/84 pass**（`python3 tests/run.py`）
+- テスト **86/86 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -66,6 +66,24 @@ claude/growth-loop/
 `SessionEnd` は非対称で、stdout がモデルに届かず、そもそも次のモデル呼び出しがない。よってこちらは `systemMessage` で人間に出す。両イベントは cooldown を共有し、`Stop` の直後に `SessionEnd` が二重発火しない。
 
 `Stop` で exit 2 や `decision` キーは**使わない**。エージェントに続行を強制して連続ブロック上限を焼くため。ターンを奪う nudge は nudge ではない。
+
+### `bin/` は PATH に乗らない（2026-08-05、ライブセッションで実測して仕様の記述を撤回）
+
+プラグインドキュメントは「プラグインが有効な間 `bin/` は Bash ツールの PATH に追加される」と書いており、README の Verify 節もそれを前提に `gl-recall` / `gl-journey` をベアコマンドとして書いていた。**実測では違った。**
+
+```
+$ gl-journey --stale 999 ; echo "EXIT=$?"
+(eval):1: command not found: gl-journey
+EXIT=127
+```
+
+`which gl-recall gl-nudge gl-journey` も全滅。マニフェストと `bin/` 配下のスクリプト1本だけを持つ使い捨ての最小プラグインでも同じ結果になったため、これは growth-loop 固有の不具合ではなく `--plugin-dir` 側の一般的な挙動だと確認済み。だが影響は growth-loop に集中する: `learn` は最初の一歩で `gl-journey` を走らせ、`recall` は `gl-recall` が全てで、`journey` と `forget` は両方とも `gl-journey` に依存している。ある実行では、失敗を報告する代わりにモデルが黙って別経路で同じ情報を取りに行っており、これは不具合そのものより悪い——失敗が握りつぶされて次に発見されなくなる。
+
+**修正:** `${CLAUDE_PLUGIN_ROOT}` はスキルの Markdown 本文内で展開されることをプローブスキルで確認済みなので、`learn` / `recall` / `journey` / `forget` の4スキルにある `bin/` 呼び出しを全て `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey` のような明示パスに書き換えた（ダブルクオート必須、パスに空白が入りうるため）。あわせて4スキルそれぞれに `allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/<script>:*)` を追加——本文と `allowed-tools` の両方で同じ変数を使うことが、権限プロンプトなしでバンドル済みスクリプトを実行させる鍵になる。
+
+この `allowed-tools` の効果は鵜呑みにせず実測で確認した。同一の `journey` スキルから `allowed-tools` 行だけを抜いたコントロール版プラグインを作り、`--allowedTools` も `--permission-mode` も付けない headless セッションで同じコマンドを走らせたところ、ツール呼び出しは `"This command requires approval"` で止まり、非対話セッションのため承認できずに実行されなかった。`allowed-tools` を戻すと同じコマンドが承認なしでそのまま実行された。フロントマターの効果は実在する。
+
+`tests/test_skills.py` の既存アサーションは `"gl-journey"` / `"gl-recall"` という部分文字列一致だったため、明示パス化後もそのまま素通りしてしまい、この不具合を検出できずリグレッションも防げなかった。明示パスの完全な部分文字列を要求するように締め直し、4スキル全てに `allowed-tools` が実際に呼び出しパスをカバーしているかを検査するテストクラスを追加した。
 
 ### gl-journey の走査範囲（仕様§5.6 からの意図的な逸脱）
 
