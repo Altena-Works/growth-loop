@@ -1,0 +1,12 @@
+{
+  "name": "growth-loop",
+  "displayName": "growth-loop",
+  "version": "0.1.0",
+  "description": "A closed learning loop for Claude Code: distil finished work into skills, refine them the moment they prove wrong, nudge you to persist what mattered, recall reasoning from past sessions, and model the person across projects.",
+  "author": {
+    "name": "4ltena",
+    "url": "https://github.com/4ltena"
+  },
+  "license": "MIT",
+  "keywords": ["skills", "memory", "learning-loop", "recall", "curation"]
+}
