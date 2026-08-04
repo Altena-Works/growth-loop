@@ -100,6 +100,38 @@ class TestNudge(unittest.TestCase):
         self.assertEqual(out.strip(), "")
         self.assertFalse((self.home / "ledger.jsonl").exists())
 
+    def test_notebookedit_session_fires(self):
+        # write_transcript only knows how to put file_path into a tool's
+        # input; NotebookEdit's target lives under notebook_path instead, so
+        # this transcript is built by hand rather than through that helper.
+        path = self.work / "notebook.jsonl"
+        lines = [
+            {"type": "user", "message": {"role": "user",
+                                         "content": [{"type": "text", "text": "clean up the notebook"}]}},
+            {"type": "assistant", "message": {"role": "assistant",
+                                              "content": [{"type": "text", "text": "done"}]}},
+        ]
+        for i in range(30):
+            lines.append({"type": "assistant", "message": {"role": "assistant", "content": [{
+                "type": "tool_use", "name": "NotebookEdit", "id": "n%d" % i,
+                "input": {"notebook_path": "/r/notebook.ipynb", "cell_id": "c%d" % i,
+                          "new_source": "print(1)"},
+            }]}})
+        with open(path, "w", encoding="utf-8") as fh:
+            for rec in lines:
+                fh.write(json.dumps(rec) + "\n")
+
+        code, out, _ = run("gl-nudge", [], env=self.env,
+                           stdin=hook_payload(path, "Stop"))
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        context = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("30", context)
+        entries = [json.loads(l) for l in
+                   (self.home / "ledger.jsonl").read_text().splitlines() if l.strip()]
+        self.assertEqual(entries[0]["stats"]["edits"], 30)
+        self.assertEqual(entries[0]["stats"]["files"], ["/r/notebook.ipynb"])
+
     def test_missing_stdin_exits_zero_silently(self):
         code, out, err = run("gl-nudge", [], env=self.env, stdin="")
         self.assertEqual(code, 0)

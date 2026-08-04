@@ -87,10 +87,17 @@ this one. If you edit plugin files while a session is already running, run
 ## Verify
 
 ```bash
-claude plugin validate ./growth-loop   # manifest + frontmatter + hooks schema
+claude plugin validate .               # manifest + frontmatter + hooks schema
 gl-recall --list-roots                 # must print at least one root
 gl-journey                             # inventory
 ```
+
+Run `claude plugin validate` from the same directory the install block left
+you in — the inner `growth-loop/growth-loop/`, where `.claude-plugin/`
+actually lives — not the outer clone. `gl-recall` and `gl-journey` are not
+cwd-sensitive the same way: once the plugin is enabled, Claude Code adds
+`bin/` to the Bash tool's `PATH`, so those two run as bare commands inside
+a session regardless of cwd.
 
 Inside a session, `/hooks` should show `gl-nudge` registered on both `Stop`
 and `SessionEnd`. If `gl-recall --list-roots` finds nothing, set

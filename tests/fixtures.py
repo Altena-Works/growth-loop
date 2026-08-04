@@ -69,6 +69,12 @@ def write_transcript(path, user_text, assistant_text, tool_calls=0,
         {"type": "assistant", "message": {"role": "assistant",
                                           "content": [{"type": "text", "text": assistant_text}]}},
     ]
+    # This None/() distinction is load-bearing for
+    # test_nudge.py::test_todowrite_does_not_count_as_an_edit, which needs
+    # `file_paths=()` to mean "no file_path key at all" — if this line ever
+    # goes back to falling back on an empty sequence, that test silently
+    # stops testing anything (every TodoWrite call would carry a stand-in
+    # file_path and count as an edit again).
     paths = list(file_paths) if file_paths is not None else ["/tmp/a.py"]
     for i in range(tool_calls):
         input_payload = {"old_string": "x", "new_string": "y"}

@@ -18,7 +18,7 @@ from pathlib import Path
 MIN_TOOL_CALLS = 25          # a session lighter than this rarely holds a skill
 MIN_EDITS = 3                # reading is not doing; require real mutation
 COOLDOWN_SECONDS = 6 * 3600  # at most one nudge per 6h, shared by both events
-EDIT_MARKERS = ("edit", "write", "create", "str_replace")  # substrings, matched case-insensitively against tool names, but a name match alone is not enough: measure() only counts the call as an edit when its input also carries a file_path, so TodoWrite (matches "write" but names no file) does not count — this is why MultiEdit and NotebookEdit still match through "edit"; widen this and more tools count as "edits," firing the nudge on sessions that only looked heavy; narrow it and real work gets missed
+EDIT_MARKERS = ("edit", "write", "create", "str_replace")  # substrings, matched case-insensitively against tool names — necessary but not sufficient: measure() only counts the call as an edit when its input also names a target under file_path or notebook_path, so TodoWrite (matches "write", names neither) does not count while MultiEdit (file_path) and NotebookEdit (notebook_path) both do; widen the marker list and more tool names match "edit"-shaped without necessarily naming a target, so the file_path/notebook_path gate is what keeps that widening from firing the nudge on sessions that only looked heavy; narrow it and real work gets missed
 
 DEFAULT_HOME = "~/.claude/growth-loop"  # where ledger/state live if unset; changing loses continuity with prior installs
 
@@ -58,15 +58,20 @@ def measure(path):
                 calls += 1
                 name = str(block.get("name", "")).lower()
                 if any(marker in name for marker in EDIT_MARKERS):
+                    target = None
                     payload = block.get("input")
-                    target = payload.get("file_path") if isinstance(payload, dict) else None
+                    if isinstance(payload, dict):
+                        target = payload.get("file_path") or payload.get("notebook_path")
                     # A tool that names no file changed no file: TodoWrite
-                    # matches "write" by name but carries no file_path, so it
-                    # must not count as an edit. Gating the count on target
-                    # also means edits > 0 implies files is non-empty, which
-                    # is what keeps message() from ever rendering "0 file(s)
-                    # ()" — there is no longer a code path where edits are
-                    # counted without a file to show for them.
+                    # matches "write" by name but carries no file_path or
+                    # notebook_path, so it must not count as an edit.
+                    # NotebookEdit's target lives under notebook_path, not
+                    # file_path — miss that key and a notebook-only session
+                    # can never nudge. Gating the count on target also means
+                    # edits > 0 implies files is non-empty, which is what
+                    # keeps message() from ever rendering "0 file(s) ()" —
+                    # there is no longer a code path where edits are counted
+                    # without a file to show for them.
                     if target:
                         edits += 1
                         if target not in files:
