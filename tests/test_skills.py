@@ -199,5 +199,54 @@ class TestProfile(unittest.TestCase):
         self.assertIn("Never announce", self.body)
 
 
+class TestJourneySkill(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "journey" / "SKILL.md")
+
+    def test_is_user_invoked_only(self):
+        self.assertEqual(self.meta.get("disable-model-invocation"), "true")
+
+    def test_runs_both_journey_invocations(self):
+        self.assertIn("gl-journey", self.body)
+        self.assertIn("--stale 60", self.body)
+
+    def test_forces_a_three_way_verdict(self):
+        for verdict in ("delete", "verify", "keep"):
+            self.assertIn(verdict, self.body.lower())
+        self.assertIn("no undecided leftovers", self.body.lower())
+
+    def test_audits_the_description_set(self):
+        self.assertIn("would exactly the right one fire", self.body)
+
+    def test_reports_a_verdict_not_the_inventory(self):
+        self.assertIn("not the inventory", self.body)
+
+
+class TestForget(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "forget" / "SKILL.md")
+
+    def test_is_user_invoked_only(self):
+        self.assertEqual(self.meta.get("disable-model-invocation"), "true")
+
+    def test_requires_confirmation_before_deleting(self):
+        self.assertIn("Wait for confirmation", self.body)
+
+    def test_forbids_tombstones(self):
+        self.assertIn("Delete, do not soften", self.body)
+        self.assertIn("deprecated", self.body)
+
+    def test_deletes_the_whole_directory(self):
+        self.assertIn("<slug>/", self.body)
+
+    def test_removes_derived_entries(self):
+        self.assertIn("derived", self.body)
+
+    def test_asks_first_on_ambiguous_scope(self):
+        self.assertIn("ambiguous", self.body.lower())
+
+
 if __name__ == "__main__":
     unittest.main()
