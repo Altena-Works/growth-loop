@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+"""Search Claude Code session transcripts. Deterministic, stdlib-only, offline.
+
+Searching transcripts with the model would burn the very context the loop
+exists to protect, so the search happens out here and the model only reads
+the summary.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+# Storage locations drift between versions and platforms; never hardcode one.
+CANDIDATE_ROOTS = (
+    "~/.claude/projects",
+    "~/.claude/sessions",
+    "~/.config/claude/projects",
+    "~/Library/Application Support/Claude/projects",
+    "~/Library/Application Support/ClaudeCode/projects",
+)
+SNIPPET_CHARS = 400          # tunable: window around each match
+DEFAULT_DAYS = 90
+DEFAULT_MAX = 25
+TOOL_INPUT_CHARS = 200
+TOOL_RESULT_CHARS = 200
+
+
+def discover_roots():
+    """Env override wins; otherwise every candidate that exists."""
+    env = os.environ.get("CLAUDE_TRANSCRIPT_DIR")
+    if env:
+        candidates = [Path(p).expanduser() for p in env.split(os.pathsep) if p]
+    else:
+        candidates = [Path(c).expanduser() for c in CANDIDATE_ROOTS]
+    roots, seen = [], set()
+    for c in candidates:
+        try:
+            if not c.is_dir():
+                continue
+            key = str(c.resolve())
+        except OSError:
+            continue
+        if key not in seen:
+            seen.add(key)
+            roots.append(c)
+    return roots
+
+
+def searched_paths():
+    env = os.environ.get("CLAUDE_TRANSCRIPT_DIR")
+    if env:
+        return [str(Path(p).expanduser()) for p in env.split(os.pathsep) if p]
+    return [str(Path(c).expanduser()) for c in CANDIDATE_ROOTS]
+
+
+def transcripts(roots, days):
+    cutoff = time.time() - days * 86400
+    found = []
+    for root in roots:
+        try:
+            files = root.rglob("*.jsonl")
+        except OSError:
+            continue
+        for f in files:
+            try:
+                mtime = f.stat().st_mtime
+            except OSError:
+                continue
+            if mtime >= cutoff:
+                found.append((mtime, f))
+    found.sort(key=lambda pair: pair[0], reverse=True)   # newest session first
+    return found
+
+
+def block_text(content):
+    """Flatten a message content field into searchable text."""
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return ""
+    parts = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        kind = block.get("type")
+        if kind == "text":
+            parts.append(str(block.get("text", "")))
+        elif kind == "tool_use":
+            raw = json.dumps(block.get("input", {}), ensure_ascii=False)
+            parts.append("[%s] %s" % (block.get("name", "tool"), raw[:TOOL_INPUT_CHARS]))
+        elif kind == "tool_result":
+            body = block.get("content")
+            if not isinstance(body, str):
+                body = json.dumps(body, ensure_ascii=False)
+            parts.append("[result] " + body[:TOOL_RESULT_CHARS])
+    return "\n".join(p for p in parts if p)
+
+
+def records(path):
+    """Yield (role, text) per line, skipping anything unparseable."""
+    try:
+        handle = open(path, "r", encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    with handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(rec, dict):
+                continue
+            message = rec.get("message")
+            if not isinstance(message, dict):
+                continue
+            text = block_text(message.get("content"))
+            if text:
+                yield str(message.get("role", "?")), text
+
+
+def window(text, match):
+    half = SNIPPET_CHARS // 2
+    start = max(0, match.start() - half)
+    end = min(len(text), match.end() + half)
+    snippet = text[start:end].replace("\n", " ")
+    return ("..." if start > 0 else "") + snippet + ("..." if end < len(text) else "")
+
+
+def build_pattern(query):
+    try:
+        return re.compile(query, re.IGNORECASE)
+    except re.error:
+        return re.compile(re.escape(query), re.IGNORECASE)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Search Claude Code session transcripts.")
+    parser.add_argument("query", nargs="?", help="regex; falls back to literal")
+    parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
+    parser.add_argument("--max", type=int, default=DEFAULT_MAX, dest="max_hits")
+    parser.add_argument("--list-roots", action="store_true")
+    args = parser.parse_args()
+
+    roots = discover_roots()
+    if not roots:
+        sys.stderr.write(
+            "gl-recall: no transcript root found. Searched:\n" +
+            "".join("  %s\n" % p for p in searched_paths()) +
+            "Set CLAUDE_TRANSCRIPT_DIR to the directory holding your .jsonl "
+            "session files and run again.\n")
+        return 1
+
+    if args.list_roots:
+        for root in roots:
+            count = sum(1 for _ in root.rglob("*.jsonl"))
+            print("%s  (%d transcript(s))" % (root, count))
+        return 0
+
+    if not args.query:
+        parser.error("a query is required unless --list-roots is given")
+
+    pattern = build_pattern(args.query)
+    hits = 0
+    sessions = 0
+    for mtime, path in transcripts(roots, args.days):
+        if hits >= args.max_hits:
+            break
+        session_hits = []
+        for role, text in records(path):
+            for match in pattern.finditer(text):
+                session_hits.append((role, window(text, match)))
+                break                     # one snippet per record keeps it readable
+            if hits + len(session_hits) >= args.max_hits:
+                break
+        if not session_hits:
+            continue
+        room = args.max_hits - hits
+        session_hits = session_hits[:room]
+        sessions += 1
+        hits += len(session_hits)
+        stamp = time.strftime("%Y-%m-%d %H:%M", time.localtime(mtime))
+        print("\n%s (%s)" % (path.stem, stamp))
+        print("-" * (len(path.stem) + len(stamp) + 3))
+        for role, snippet in session_hits:
+            print("  %s: %s" % (role, snippet))
+
+    print("\n%d match(es) across %d session(s)" % (hits, sessions))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        sys.exit(0)
