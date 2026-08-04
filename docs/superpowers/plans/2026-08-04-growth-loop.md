@@ -85,7 +85,8 @@ The planner re-ran spec §3 against `code.claude.com/docs` and this machine. **I
 | File | Responsibility |
 |---|---|
 | `tests/fixtures.py` | Builds the synthetic transcript / skill / state fixtures in a `tempfile` dir. Shared by every test module. |
-| `tests/test_manifest.py` | `plugin.json` and `hooks.json` parse; required fields; `.claude-plugin/` contains only `plugin.json`; the 13-file tree is exact. |
+| `tests/test_manifest.py` | `plugin.json` parses; required fields; `.claude-plugin/` contains only `plugin.json`; no stray files anywhere in the plugin. |
+| `tests/test_completeness.py` | Created in Task 9: the plugin tree is exactly the 13 files of spec §4. |
 | `tests/test_recall.py` | `gl-recall` root discovery, env override, regex + literal fallback, grouping, empty-state exit 1. |
 | `tests/test_nudge.py` | `gl-nudge` thresholds, cooldown, ledger append, Stop vs SessionEnd payload shape, every failure path exits 0 silently. |
 | `tests/test_journey.py` | `gl-journey` skill discovery, dedupe, description extraction, staleness, `--stale N`, memory + ledger sections. |
@@ -255,13 +256,16 @@ class TestManifest(unittest.TestCase):
         entries = sorted(p.name for p in (PLUGIN_ROOT / ".claude-plugin").iterdir())
         self.assertEqual(entries, ["plugin.json"])
 
-    def test_tree_is_exactly_the_thirteen_files(self):
+    def test_no_unexpected_files_in_the_plugin(self):
+        # Completeness (all 13 present) is asserted once, in Task 9's
+        # tests/test_completeness.py. Here we only guard against strays, so
+        # this module stays green from Task 1 onward.
         found = {
             str(p.relative_to(PLUGIN_ROOT))
             for p in PLUGIN_ROOT.rglob("*")
             if p.is_file() and "__pycache__" not in p.parts
         }
-        self.assertEqual(found, set(EXPECTED_TREE))
+        self.assertEqual(found - set(EXPECTED_TREE), set())
 
 
 if __name__ == "__main__":
@@ -313,7 +317,7 @@ Create `growth-loop/.claude-plugin/plugin.json`:
 - [ ] **Step 7: Run the test**
 
 Run: `python3 tests/run.py`
-Expected: `test_manifest_parses_and_has_required_fields`, `test_description_names_all_five_loop_stages`, `test_manifest_declares_no_custom_hooks_path`, `test_claude_plugin_dir_contains_only_the_manifest` PASS. `test_tree_is_exactly_the_thirteen_files` FAILS — 12 files still missing. That failure is the plan's progress bar; it turns green in Task 9.
+Expected: **all five `TestManifest` cases PASS.** Every task in this plan ends with a fully green suite — a red test always means something is wrong.
 
 - [ ] **Step 8: Commit**
 
@@ -643,7 +647,7 @@ python3 -m py_compile growth-loop/bin/gl-recall
 python3 tests/run.py
 ```
 
-Expected: every `TestRecall` case PASSES. `test_tree_is_exactly_the_thirteen_files` still fails (11 files missing).
+Expected: every `TestRecall` case PASSES and the whole suite is green.
 
 - [ ] **Step 5: Commit**
 
@@ -1887,12 +1891,41 @@ git commit -m "feat: add journey and forget skills"
 ### Task 9: README, synthetic end-to-end verification, acceptance
 
 **Files:**
-- Create: `growth-loop/README.md`
+- Create: `growth-loop/README.md`, `tests/test_completeness.py`
 - Test: full suite + the spec §7 protocol run by hand
 
 **Interfaces:**
-- Consumes: everything.
-- Produces: the finished plugin. `test_tree_is_exactly_the_thirteen_files` turns green here.
+- Consumes: everything, including `fixtures.EXPECTED_TREE`.
+- Produces: the finished plugin.
+
+- [ ] **Step 0: Write the completeness test**
+
+Create `tests/test_completeness.py` — the single assertion that the plugin tree matches spec §4 exactly. It belongs here, at the end, because it is only meaningful once every file exists:
+
+```python
+import unittest
+
+from fixtures import EXPECTED_TREE, PLUGIN_ROOT
+
+
+class TestCompleteness(unittest.TestCase):
+    def test_tree_is_exactly_the_thirteen_files(self):
+        found = {
+            str(p.relative_to(PLUGIN_ROOT))
+            for p in PLUGIN_ROOT.rglob("*")
+            if p.is_file() and "__pycache__" not in p.parts
+        }
+        missing = sorted(set(EXPECTED_TREE) - found)
+        unexpected = sorted(found - set(EXPECTED_TREE))
+        self.assertEqual((missing, unexpected), ([], []))
+
+    def test_there_are_exactly_thirteen(self):
+        self.assertEqual(len(EXPECTED_TREE), 13)
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
 
 - [ ] **Step 1: Write `growth-loop/README.md`**
 
@@ -1959,7 +1992,7 @@ ls -l growth-loop/bin/
 python3 tests/run.py
 ```
 
-Expected: `json ok`, all three scripts `-rwxr-xr-x`, and the **entire suite green including `test_tree_is_exactly_the_thirteen_files`**.
+Expected: `json ok`, all three scripts `-rwxr-xr-x`, and the **entire suite green, including the new `TestCompleteness`**.
 
 - [ ] **Step 3: Synthetic end-to-end in a scratch dir (spec §7.3)**
 
@@ -2021,7 +2054,7 @@ In the session: `/hooks` shows `gl-nudge` on both `Stop` and `SessionEnd`; `/gro
 
 - [ ] **Step 5: Walk the acceptance checklist (spec §8)**
 
-- [ ] 13 files, tree exactly as §4; nothing but `plugin.json` inside `.claude-plugin/` — proven by `test_tree_is_exactly_the_thirteen_files`
+- [ ] 13 files, tree exactly as §4; nothing but `plugin.json` inside `.claude-plugin/` — proven by `tests/test_completeness.py` + `test_claude_plugin_dir_contains_only_the_manifest`
 - [ ] All §3 facts re-verified against live docs; divergences reported — see the *Verified against live docs* table above; carry it into the final report
 - [ ] Six skills meet §5.2; `journey`/`forget` user-invoked only — proven by `tests/test_skills.py`
 - [ ] Nudge advisory-only, exit 0 everywhere, thresholds + cooldown proven by test — proven by `tests/test_nudge.py` + Step 3
