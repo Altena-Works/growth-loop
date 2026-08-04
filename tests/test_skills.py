@@ -1,0 +1,149 @@
+import unittest
+
+from fixtures import MODEL_INVOKED, PLUGIN_ROOT, USER_INVOKED_ONLY
+
+DESCRIPTION_CAP = 1536      # verified 2026-08-04: description + when_to_use cap
+BODY_LINE_CAP = 500
+HEDGE_WORDS = ("might work", "probably works", "may or may not", "should be fine")
+
+
+def parse_frontmatter(path):
+    """Return (frontmatter dict, body). Flat key: value YAML only."""
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert lines and lines[0].strip() == "---", "%s has no frontmatter" % path
+    meta, end = {}, None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end = index
+            break
+        if ":" in line and not line.startswith((" ", "\t", "-")):
+            key, value = line.split(":", 1)
+            meta[key.strip()] = value.strip().strip("\"'")
+    assert end is not None, "%s frontmatter is unterminated" % path
+    return meta, "\n".join(lines[end + 1:])
+
+
+def existing_skills():
+    return sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md"))
+
+
+class TestSkillFrontmatter(unittest.TestCase):
+    def test_every_skill_has_name_and_description(self):
+        for path in existing_skills():
+            meta, _ = parse_frontmatter(path)
+            self.assertEqual(meta.get("name"), path.parent.name, path)
+            self.assertTrue(meta.get("description"), path)
+
+    def test_description_within_cap(self):
+        for path in existing_skills():
+            meta, _ = parse_frontmatter(path)
+            combined = meta.get("description", "") + meta.get("when_to_use", "")
+            self.assertLessEqual(len(combined), DESCRIPTION_CAP, path)
+
+    def test_description_states_when_not_just_what(self):
+        # A description without a trigger clause cannot be selected on.
+        for path in existing_skills():
+            meta, _ = parse_frontmatter(path)
+            text = (meta.get("description", "") + " " + meta.get("when_to_use", "")).lower()
+            self.assertTrue(any(w in text for w in ("when ", "after ", "the moment")),
+                            "%s description names no trigger situation" % path)
+
+    def test_invocation_flags(self):
+        for name in USER_INVOKED_ONLY:
+            path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+            if not path.exists():
+                continue
+            meta, _ = parse_frontmatter(path)
+            self.assertEqual(meta.get("disable-model-invocation"), "true",
+                             "%s: review and deletion are human decisions" % name)
+        for name in MODEL_INVOKED:
+            path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+            if not path.exists():
+                continue
+            meta, _ = parse_frontmatter(path)
+            self.assertNotIn("disable-model-invocation", meta, name)
+
+    def test_body_length(self):
+        for path in existing_skills():
+            _, body = parse_frontmatter(path)
+            self.assertLess(len(body.splitlines()), BODY_LINE_CAP, path)
+
+    def test_no_hedging(self):
+        for path in existing_skills():
+            _, body = parse_frontmatter(path)
+            for hedge in HEDGE_WORDS:
+                self.assertNotIn(hedge, body.lower(), "%s hedges: %r" % (path, hedge))
+
+    def test_declining_is_a_first_class_outcome(self):
+        for name in ("learn", "refine", "profile"):
+            path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+            if not path.exists():
+                continue
+            _, body = parse_frontmatter(path)
+            self.assertIn("## When to write nothing", body,
+                          "%s must make declining first-class" % name)
+
+
+class TestLearn(unittest.TestCase):
+    def setUp(self):
+        self.path = PLUGIN_ROOT / "skills" / "learn" / "SKILL.md"
+        self.meta, self.body = parse_frontmatter(self.path)
+
+    def test_runs_journey_first_and_routes_to_refine_on_overlap(self):
+        self.assertIn("gl-journey", self.body)
+        self.assertIn("/growth-loop:refine", self.body)
+
+    def test_states_the_three_way_gate(self):
+        for gate in ("took real work", "will recur", "procedural"):
+            self.assertIn(gate, self.body)
+
+    def test_carries_the_output_template(self):
+        for heading in ("When this applies", "The approach", "What goes wrong"):
+            self.assertIn(heading, self.body)
+
+    def test_offers_the_subagent(self):
+        self.assertIn("skill-author", self.body)
+
+    def test_takes_arguments(self):
+        self.assertIn("$ARGUMENTS", self.body)
+
+
+class TestRefine(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "refine" / "SKILL.md")
+
+    def test_requires_reading_the_whole_file_first(self):
+        self.assertIn("Read the whole file", self.body)
+
+    def test_requires_a_dated_revisions_entry(self):
+        self.assertIn("## Revisions", self.body)
+
+    def test_routes_to_forget_when_beyond_repair(self):
+        self.assertIn("/growth-loop:forget", self.body)
+        self.assertIn("beyond repair", self.body)
+
+    def test_fires_only_on_something_that_happened_this_session(self):
+        self.assertIn("this session", self.body)
+
+
+class TestSkillAuthorAgent(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "agents" / "skill-author.md")
+
+    def test_frontmatter_fields(self):
+        self.assertEqual(self.meta.get("name"), "skill-author")
+        self.assertTrue(self.meta.get("description"))
+        self.assertEqual(self.meta.get("tools"), "Read, Write, Edit, Glob, Grep, Bash")
+
+    def test_reports_exactly_two_things(self):
+        self.assertIn("exactly two things", self.body)
+
+    def test_refuses_dead_end_free_skills(self):
+        self.assertIn("What goes wrong", self.body)
+
+
+if __name__ == "__main__":
+    unittest.main()
