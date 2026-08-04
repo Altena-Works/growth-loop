@@ -10,7 +10,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 
 ## 現在の状態
 
-**実装完了。ブランチ `feat/growth-loop`、HEAD は `c816388`。**
+**実装完了、実セッションで動作検証済み。ブランチ `feat/growth-loop`、HEAD は `bdbb54d`。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
 - テスト **86/86 pass**（`python3 tests/run.py`）
@@ -18,21 +18,35 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
 
+### 実セッションで確認済み（2026-08-05）
+
+`claude --plugin-dir` の headless モード（`-p`）で実際に走らせて確認した。合成テストでは証明できない部分がここで初めて通った。
+
+| 項目 | 結果 |
+|---|---|
+| スキル登録 | `learn` `refine` `recall` `profile` の4つがモデルから見える |
+| `journey` / `forget` がモデル一覧に出ない | 意図どおり（`disable-model-invocation`）。`/growth-loop:journey` でユーザーからは起動できる |
+| **フックの端から端までの発火** | 30 tool calls / 30 edits / 異なるファイル5件を正確に記録し、ledger と nudge-state を書き出した |
+| `${CLAUDE_PLUGIN_ROOT}` のフック内解決 | 解決している（Bash ツールでは空。フック/スキル置換専用の変数で環境変数ではない） |
+| `gl-journey` の実行 | ツール許可を渡さない状態でも `allowed-tools` フロントマターにより承認なしで実行 |
+| `gl-recall` の実行 | 3,429件のトランスクリプトを検索、`--days 365` への拡大も動作 |
+
+**この検証で `bin/` の PATH 不発を発見し、修正した**（下の「`bin/` は PATH に乗らない」節）。9タスク分のレビューをすり抜けた欠陥で、ユニットテストでは原理的に捕まらない種類のもの。
+
+スキルの散文も実地で規律を見せた。棚卸し材料がゼロのとき `journey` は判定を捏造せず空判定として報告し、サンドボックスでスキル本文が読めなかった実行では「What goes wrong の厚い方へ統合するという比較を実行できていないので、重複なしの結論は覆りうる」と自ら限界を申告した。
+
 ### 残っている作業
 
-対話的な読み込み確認だけが未実施。サブエージェントでは実行できないため、人間が端末で走らせる必要がある:
+対話 UI でしか見られないものが1つだけ:
 
 ```bash
 cd /Users/kn/File/projects/claude/growth-loop
 claude --plugin-dir ./growth-loop
 ```
 
-セッション内で確認すること:
+- `/hooks` に `gl-nudge` が `Stop` と `SessionEnd` の両方に登録されて見えるか
 
-1. `/hooks` に `gl-nudge` が **`Stop` と `SessionEnd` の両方**に登録されて見えるか（パスは `${CLAUDE_PLUGIN_ROOT}` を含み `/bin/gl-nudge` で終わる）
-2. `/growth-loop:` の補完に6つ全部（`learn` `refine` `recall` `profile` `journey` `forget`）出るか
-3. `/growth-loop:journey` が `gl-journey` と `gl-journey --stale 60` を実際に走らせ、在庫の垂れ流しではなく三択判定で終わるか
-4. 重いツール列（25コール以上・編集3件以上）を作ってセッションを終え、nudge が実セッションで発火するか。合成テストはスクリプトの論理を証明するが、フック登録と配送経路の端から端まではライブでしか証明できない
+ただしこれは表示の確認にすぎない。**フックが実際に発火して ledger に正しい統計を書くところまでは上表で確認済み**で、そちらのほうが強い証拠になっている。
 
 ## 構成
 
@@ -47,7 +61,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 84テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 86テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -121,6 +135,6 @@ EXIT=127
 
 ## 次にやるなら
 
-1. 上の対話的検証4項目（これが済むまで「動く」とは言えない）
+1. `/hooks` の表示確認（残る唯一の未確認項目。発火自体は確認済みなので優先度は低い）
 2. GitHub リポジトリ作成と push（**未承認。push は都度承認が要る**）
 3. 実運用でしばらく使い、`MIN_TOOL_CALLS` / `MIN_EDITS` / `COOLDOWN_SECONDS` を体感に合わせる。README にも書いたが、緩めるのは「鳴ってほしかった」と思ってからにする。慣れてしまってから締め直しても habituation は戻らない
