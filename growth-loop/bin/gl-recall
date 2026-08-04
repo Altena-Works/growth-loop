@@ -22,21 +22,30 @@ CANDIDATE_ROOTS = (
     "~/Library/Application Support/ClaudeCode/projects",
 )
 SNIPPET_CHARS = 400          # tunable: window around each match
-DEFAULT_DAYS = 90
-DEFAULT_MAX = 25
-TOOL_INPUT_CHARS = 200
-TOOL_RESULT_CHARS = 200
+DEFAULT_DAYS = 90            # tunable: how far back to look; larger = slower scans of old sessions
+DEFAULT_MAX = 25             # tunable: hit cap when --max isn't given; larger = more stdout to read/summarise
+TOOL_INPUT_CHARS = 200       # tunable: tool_use input preview length; larger = noisier snippets, more matched text
+TOOL_RESULT_CHARS = 200      # tunable: tool_result preview length; larger = noisier snippets, more matched text
+
+
+def searched_paths():
+    """Every path we will attempt, in order — env override, or every candidate.
+
+    Single source of truth for "what did we search": discover_roots() filters
+    this same list down to the ones that actually exist, so the two can never
+    drift into naming different paths.
+    """
+    env = os.environ.get("CLAUDE_TRANSCRIPT_DIR")
+    if env:
+        return [str(Path(p).expanduser()) for p in env.split(os.pathsep) if p]
+    return [str(Path(c).expanduser()) for c in CANDIDATE_ROOTS]
 
 
 def discover_roots():
-    """Env override wins; otherwise every candidate that exists."""
-    env = os.environ.get("CLAUDE_TRANSCRIPT_DIR")
-    if env:
-        candidates = [Path(p).expanduser() for p in env.split(os.pathsep) if p]
-    else:
-        candidates = [Path(c).expanduser() for c in CANDIDATE_ROOTS]
+    """Every searched_paths() candidate that exists, deduped by resolved path."""
     roots, seen = [], set()
-    for c in candidates:
+    for p in searched_paths():
+        c = Path(p)
         try:
             if not c.is_dir():
                 continue
@@ -47,13 +56,6 @@ def discover_roots():
             seen.add(key)
             roots.append(c)
     return roots
-
-
-def searched_paths():
-    env = os.environ.get("CLAUDE_TRANSCRIPT_DIR")
-    if env:
-        return [str(Path(p).expanduser()) for p in env.split(os.pathsep) if p]
-    return [str(Path(c).expanduser()) for c in CANDIDATE_ROOTS]
 
 
 def transcripts(roots, days):
