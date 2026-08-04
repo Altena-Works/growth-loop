@@ -18,7 +18,7 @@ from pathlib import Path
 MIN_TOOL_CALLS = 25          # a session lighter than this rarely holds a skill
 MIN_EDITS = 3                # reading is not doing; require real mutation
 COOLDOWN_SECONDS = 6 * 3600  # at most one nudge per 6h, shared by both events
-EDIT_MARKERS = ("edit", "write", "create", "str_replace")
+EDIT_MARKERS = ("edit", "write", "create", "str_replace")  # substrings, matched case-insensitively against tool names — this is why MultiEdit and NotebookEdit match through "edit"; widen this and more tools count as "edits," firing the nudge on sessions that only looked heavy; narrow it and real work gets missed
 
 DEFAULT_HOME = "~/.claude/growth-loop"  # where ledger/state live if unset; changing loses continuity with prior installs
 
@@ -74,20 +74,25 @@ def read_state():
 
 
 def record(session_id, calls, edits, files):
-    """Append to the ledger and stamp the cooldown. Never raises."""
+    """Stamp the cooldown, then append to the ledger. Never raises."""
     now = time.time()
     try:
         base = home()
         base.mkdir(parents=True, exist_ok=True)
+        # State first: it is the guard against re-firing inside the cooldown
+        # window, so it must land even if the ledger write below fails. A
+        # missing ledger line only costs an audit record; a missing state
+        # write reopens the habituation failure this file's docstring warns
+        # about. Do not reorder this back to "ledger, then state."
+        (base / "nudge-state.json").write_text(
+            json.dumps({"last_nudge": now, "last_session": session_id}),
+            encoding="utf-8")
         with open(base / "ledger.jsonl", "a", encoding="utf-8") as fh:
             fh.write(json.dumps({
                 "ts": now,
                 "session": session_id,
                 "stats": {"tool_calls": calls, "edits": edits, "files": files},
             }) + "\n")
-        (base / "nudge-state.json").write_text(
-            json.dumps({"last_nudge": now, "last_session": session_id}),
-            encoding="utf-8")
     except OSError:
         pass
 
