@@ -10,7 +10,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 
 ## 現在の状態
 
-**実装完了、実セッションで動作検証済み。ブランチ `feat/growth-loop`、HEAD は下記コミット。**
+**実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
 - テスト **89/89 pass**（`python3 tests/run.py`）

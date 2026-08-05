@@ -147,6 +147,18 @@ Distilled skills are written to `~/.claude/skills/<slug>/SKILL.md`, not
 inside this plugin, so they load globally across every project and survive
 this plugin being removed.
 
+`gl-journey --paths` prints the two write targets it has resolved:
+
+```
+skills-root: /Users/you/.claude/skills
+profile: /Users/you/.claude/growth-loop/profile.md
+```
+
+`learn` and `profile` run that before writing, rather than assuming a path.
+Resolution therefore happens once, in the same code that decides where the
+sweep reads, so a distilled skill can never land somewhere the review will
+not look.
+
 `gl-journey` scans `~/.claude/skills` and `./.claude/skills` for `SKILL.md`
 files by default — exactly where the learning loop writes and nowhere else,
 so a review never surfaces someone else's installed plugins alongside your
