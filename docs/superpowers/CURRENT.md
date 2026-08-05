@@ -10,10 +10,10 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 
 ## 現在の状態
 
-**実装完了、実セッションで動作検証済み。ブランチ `feat/growth-loop`、HEAD は `bdbb54d`。**
+**実装完了、実セッションで動作検証済み。ブランチ `feat/growth-loop`、HEAD は下記コミット。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **86/86 pass**（`python3 tests/run.py`）
+- テスト **89/89 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -30,6 +30,10 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 | `${CLAUDE_PLUGIN_ROOT}` のフック内解決 | 解決している（Bash ツールでは空。フック/スキル置換専用の変数で環境変数ではない） |
 | `gl-journey` の実行 | ツール許可を渡さない状態でも `allowed-tools` フロントマターにより承認なしで実行 |
 | `gl-recall` の実行 | 3,429件のトランスクリプトを検索、`--days 365` への拡大も動作 |
+| **nudge がモデルに到達** | 継続ターンでモデルが `Stop hook additional context:` の全文を逐語引用した |
+| `profile` の書き込み | 差し替え先に `## Tooling` 配下で日付付きの1行を追記 |
+| `learn` の書き込み | 差し替え先に `<slug>/SKILL.md` を生成し、パスと description の2つだけを報告 |
+| **ループが閉じる** | `learn` が書いたスキルを `gl-journey` が列挙。書かれたスキルには実在の行き止まりを記した `What goes wrong` がある |
 
 **この検証で `bin/` の PATH 不発を発見し、修正した**（下の「`bin/` は PATH に乗らない」節）。9タスク分のレビューをすり抜けた欠陥で、ユニットテストでは原理的に捕まらない種類のもの。
 
@@ -61,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 86テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 89テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -98,6 +102,25 @@ EXIT=127
 この `allowed-tools` の効果は鵜呑みにせず実測で確認した。同一の `journey` スキルから `allowed-tools` 行だけを抜いたコントロール版プラグインを作り、`--allowedTools` も `--permission-mode` も付けない headless セッションで同じコマンドを走らせたところ、ツール呼び出しは `"This command requires approval"` で止まり、非対話セッションのため承認できずに実行されなかった。`allowed-tools` を戻すと同じコマンドが承認なしでそのまま実行された。フロントマターの効果は実在する。
 
 `tests/test_skills.py` の既存アサーションは `"gl-journey"` / `"gl-recall"` という部分文字列一致だったため、明示パス化後もそのまま素通りしてしまい、この不具合を検出できずリグレッションも防げなかった。明示パスの完全な部分文字列を要求するように締め直し、4スキル全てに `allowed-tools` が実際に呼び出しパスをカバーしているかを検査するテストクラスを追加した。
+
+### 書き込み先はスクリプトに解決させる（2026-08-05、ライブセッションで2度失敗して確定）
+
+`learn` と `profile` は書き込み先を散文で名指ししていた。`learn` は `~/.claude/skills/<slug>/SKILL.md` を決め打ち、`profile` は「`~/.claude/growth-loop/profile.md`、`$GROWTH_LOOP_HOME` が設定されていればそちら」という併記。**どちらも実測で書き込みに失敗した。**
+
+決め打ちの害は書き込み失敗だけではない。`gl-journey` の走査先を絞った際に `learn` 側を直さなかったため、`GROWTH_LOOP_SKILL_ROOTS` を設定すると `learn` の書き込み先と `gl-journey` の走査先がずれる。`learn` の第一歩は「`gl-journey` を走らせて重複を検出する」なので、自分が書いた場所を自分で見に行けなくなり、腐敗の入り口を塞ぐ仕組みがそこで止まる。
+
+最初の修正では散文をシェル展開に置き換えた（`echo "${GROWTH_LOOP_HOME:-$HOME/.claude/growth-loop}/profile.md"`）。**これも実測で失敗した。** このユーザーの `settings.json` の PreToolUse フックが、シェル展開を含む Bash コマンドを `Contains expansion` で拒否する。そしてブロックされたモデルは、もっともらしいパスを推測して読み書きを試み、成功したように見える報告を返しながら実際には何も書かない。素の失敗より悪い。
+
+**現在の方式:** `gl-journey --paths` が解決済みのパスを2行で出す。
+
+```
+skills-root: /Users/kn/.claude/skills
+profile: /Users/kn/.claude/growth-loop/profile.md
+```
+
+`learn` と `profile` はこれを実行して結果を使う。解決は Python 側の1箇所だけで行われるので、走査先と書き込み先が構造的にずれない。スキル本文には「シェル展開で解決しようとするな」という理由付きの禁止も書いてある。
+
+`forget` は `gl-journey` の出力から実パスを得るので構造的に正しく、`refine` はその場で編集するだけなので、どちらも対象外。
 
 ### gl-journey の走査範囲（仕様§5.6 からの意図的な逸脱）
 

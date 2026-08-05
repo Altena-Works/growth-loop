@@ -105,6 +105,18 @@ class TestLearn(unittest.TestCase):
         for heading in ("When this applies", "The approach", "What goes wrong"):
             self.assertIn(heading, self.body)
 
+    def test_resolves_the_write_target_instead_of_hardcoding_it(self):
+        # learn must write into the first root gl-journey scans. Hardcoding
+        # ~/.claude/skills desynchronises the two the moment anyone sets
+        # GROWTH_LOOP_SKILL_ROOTS: learn keeps writing where gl-journey no
+        # longer reads, so learn's own overlap check — the thing that stops
+        # near-duplicates — silently stops finding anything.
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths', self.body)
+        self.assertIn("skills-root:", self.body)
+
+    def test_does_not_instruct_a_hardcoded_skills_path(self):
+        self.assertNotIn("`~/.claude/skills/<slug>/SKILL.md`", self.body)
+
     def test_offers_the_subagent(self):
         self.assertIn("skill-author", self.body)
 
@@ -177,8 +189,17 @@ class TestProfile(unittest.TestCase):
         self.meta, self.body = parse_frontmatter(
             PLUGIN_ROOT / "skills" / "profile" / "SKILL.md")
 
-    def test_names_the_file(self):
-        self.assertIn("~/.claude/growth-loop/profile.md", self.body)
+    def test_resolves_the_file_path_instead_of_hardcoding_it(self):
+        # A live session proved the earlier prose form ("~/.claude/... , or
+        # $GROWTH_LOOP_HOME/... when that variable is set") fails: the model
+        # took the first path and never consulted the variable, so the write
+        # silently never happened. The skill must resolve the path with a
+        # command whose output it then uses.
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths', self.body)
+        self.assertIn("profile:", self.body)
+
+    def test_does_not_instruct_a_hardcoded_profile_path(self):
+        self.assertNotIn("`~/.claude/growth-loop/profile.md`", self.body)
 
     def test_has_the_three_sections(self):
         for section in ("Tooling", "Conventions", "Working style"):
@@ -270,6 +291,7 @@ class TestScriptInvocationAllowedTools(unittest.TestCase):
         "recall": "gl-recall",
         "journey": "gl-journey",
         "forget": "gl-journey",
+        "profile": "gl-journey",
     }
 
     def test_allowed_tools_matches_the_invoked_path(self):

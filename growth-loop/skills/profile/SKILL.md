@@ -1,15 +1,31 @@
 ---
 name: profile
 description: Maintains a cross-project model of the person at ~/.claude/growth-loop/profile.md - their tooling, conventions, and working style. Use when a stated preference recurs for the second time, when the user corrects the same class of thing again, or when the nudge hook reports a heavy session. CLAUDE.md describes the project; this describes the person and travels between repos.
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
 ## The file
 
-`~/.claude/growth-loop/profile.md`, or `$GROWTH_LOOP_HOME/profile.md` when
-that variable is set. It sits outside any repository on purpose: the person
-travels between repos and the project does not. A fact that lives in one
-repo's CLAUDE.md is invisible from the next repo the same person opens
-tomorrow; this file is the one place that follows them there.
+Resolve the path before reading or writing. Do not assume it:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths
+```
+
+Take the `profile:` line and use that exact path for both the read below
+and the write. Reading a different path than you write to is the failure
+that looks like success: the file reads as empty, so a whole profile gets
+overwritten with one line instead of appended to.
+
+Do not resolve it with a shell expansion such as
+`${GROWTH_LOOP_HOME:-...}` — some hook policies refuse any command
+containing an expansion, and the skill then falls back to guessing a path
+and writing nothing.
+
+It sits outside any repository on purpose: the person travels between repos
+and the project does not. A fact that lives in one repo's CLAUDE.md is
+invisible from the next repo the same person opens tomorrow; this file is
+the one place that follows them there.
 
 ## The test
 

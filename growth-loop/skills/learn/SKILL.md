@@ -2,7 +2,7 @@
 name: learn
 description: Distils a reusable skill from work that just finished, when a task took real effort to get right and the same problem will come back. Use when the user says "remember how to do this", "write that down", or "make a skill for this"; when a multi-step procedure has just succeeded after several failed attempts; or when the nudge hook reports a heavy session. Takes an optional target - a directory or URL - and otherwise distils this conversation.
 argument-hint: "[directory-or-url]"
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*), Bash(echo:*), Bash(cut:*)
 ---
 
 ## First: check for overlap
@@ -48,8 +48,25 @@ Common false positives to name and reject:
 
 ## Where it goes
 
-`~/.claude/skills/<slug>/SKILL.md`, where `<slug>` is the skill name in
-kebab-case. This is deliberately outside the plugin directory, so the skill
+Resolve the directory before writing. Do not assume a path:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths
+```
+
+Take the `skills-root:` line and write to `<that directory>/<slug>/SKILL.md`,
+where `<slug>` is the skill name in kebab-case.
+
+That command reports the first place `gl-journey` itself looks, so a skill
+written there is a skill the overlap check above will find next time.
+Writing to a hardcoded `~/.claude/skills` instead breaks that check the
+moment anyone redirects the roots — `learn` would keep writing where
+`gl-journey` no longer reads, and every new skill would look like the first
+of its kind. Do not try to resolve the path with a shell expansion such as
+`${GROWTH_LOOP_SKILL_ROOTS:-...}` either: some hook policies refuse any
+command containing an expansion, and the skill then falls back to guessing.
+
+The directory sits outside the plugin on purpose, so a distilled skill
 survives `growth-loop` itself being removed.
 
 ## The template

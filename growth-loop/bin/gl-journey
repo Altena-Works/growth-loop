@@ -99,7 +99,21 @@ def main():
         description="Inventory skills and memory produced by the learning loop.")
     parser.add_argument("--stale", type=int, default=None,
                         help="show only assets older than N days")
+    parser.add_argument("--paths", action="store_true",
+                        help="print the resolved write targets and exit")
     args = parser.parse_args()
+
+    if args.paths:
+        # The skills that write have to land where this script reads, and a
+        # skill cannot resolve the environment itself: a shell expansion like
+        # ${GROWTH_LOOP_HOME:-...} is refused outright by some PreToolUse hook
+        # policies, and a hardcoded path desynchronises the moment anyone
+        # overrides the roots. So resolution happens here, once, and both
+        # sides read the same answer.
+        roots = skill_roots()
+        print("skills-root: %s" % (roots[0] if roots else Path(SKILL_ROOTS[0]).expanduser()))
+        print("profile: %s" % (home() / "profile.md"))
+        return 0
 
     print("SKILLS")
     print("=" * 6)
