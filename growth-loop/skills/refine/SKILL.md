@@ -11,12 +11,18 @@ description: Corrects a stored skill the moment it proves wrong in use - a step 
 - The right skill did not fire for a task it obviously matched, or a wrong
   one fired instead.
 
-The hard rule: only on something that happened **this session**. Never
-refine on a hunch, a half-remembered past failure, or a guess about what
-might be wrong. The correction is worth writing exactly when the error is
-fully understood, which is now — while the failing command, its output, and
-the fix are all still in view — not later, when the detail that mattered
-has already faded.
+Also, when a review puts two skills side by side and one has to absorb
+what the other documents. That is a correction with both files in view, so
+it belongs here rather than being done by hand — `/growth-loop:journey`
+routes merges this way.
+
+The hard rule: **refine on evidence in front of you, never on a hunch.**
+Usually that means something that happened this session — the failing
+command, its output, and the fix all still in view, which is when the
+correction is worth writing and before the detail that mattered has faded.
+A review that has both skills open is the same standard met a different
+way. What is excluded is the same either way: a half-remembered past
+failure, or a guess about what might be wrong.
 
 ## The procedure
 

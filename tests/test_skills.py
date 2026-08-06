@@ -172,8 +172,15 @@ class TestRefine(unittest.TestCase):
         self.assertIn("/growth-loop:forget", self.body)
         self.assertIn("beyond repair", self.body)
 
-    def test_fires_only_on_something_that_happened_this_session(self):
+    def test_fires_on_evidence_not_recency(self):
+        # journey routes a duplicate merge here, but the old rule said
+        # "only on something that happened this session" - so a live review
+        # correctly refused to invoke refine, and the merge had nowhere to
+        # go. The standard is evidence in view, which a review meets.
         self.assertIn("this session", self.body)
+        self.assertIn("refine on evidence in front of you, never on a hunch",
+                      self.body)
+        self.assertIn("/growth-loop:journey", self.body)
 
 
 class TestSkillAuthorAgent(unittest.TestCase):
