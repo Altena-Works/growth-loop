@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **102/102 pass**（`python3 tests/run.py`）
+- テスト **104/104 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 102テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 104テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -185,6 +185,7 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 
 レビューで Minor として繰り越していた項目を一巡した。直したもの:
 
+- `GROWTH_LOOP_HOME` が「設定済みだが空」のとき、`os.environ.get(KEY, DEFAULT)` が空文字列を返し `Path("")` が `Path(".")` になるため、profile.md と ledger が**作業中のリポジトリに撒かれていた**。リポジトリの外に置くことが存在理由の状態ファイルなので、影響は小さくない。`export GROWTH_LOOP_HOME=` やラッパーの設定ミスで起きる。`gl-recall` の `CLAUDE_TRANSCRIPT_DIR` は `if env:` で受けていて同じ問題は無い
 - `gl-journey` の締めの文が「一度も呼ばれていないスキルはたいてい削除対象」と示唆していたが、**このプラグインは呼び出し回数を追跡していない**（LEDGER が数えるのは nudge）。ツールが持たないデータに基づく推論を勧めていた。実地確認でモデルが明示的にその推論を拒否したことで露見
 - `gl-journey` のスキル名列が28文字を超えると `%-28s` が切り詰めないため列が崩れ、表として読めなくなっていた
 - `skill-author` が `What goes wrong` しか課しておらず、`learn` のテンプレートを持っていなかった。委譲したかどうかでスキルの形が変わる。実際の委譲で `The command` / `Read this before you run anything` という別見出しが出て発覚

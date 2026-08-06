@@ -36,7 +36,11 @@ DEFAULT_HOME = "~/.claude/growth-loop"  # where ledger/state live if unset; chan
 
 
 def home():
-    return Path(os.environ.get("GROWTH_LOOP_HOME", DEFAULT_HOME)).expanduser()
+    # Set-but-empty is not an override: os.environ.get returns "" rather than
+    # the default, and Path("") is Path("."), which would drop ledger.jsonl
+    # and nudge-state.json into the working directory. State living outside
+    # any repository is the point.
+    return Path(os.environ.get("GROWTH_LOOP_HOME") or DEFAULT_HOME).expanduser()
 
 
 def measure(path):

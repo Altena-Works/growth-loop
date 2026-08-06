@@ -47,7 +47,12 @@ def clip(text, limit):
 
 
 def home():
-    return Path(os.environ.get("GROWTH_LOOP_HOME", DEFAULT_HOME)).expanduser()
+    # An env var that is set but empty is not an override. os.environ.get
+    # returns "" rather than the default for it, and Path("") is Path("."),
+    # so `export GROWTH_LOOP_HOME=` would scatter profile.md and the ledger
+    # into whatever repository happens to be the working directory — the
+    # exact thing keeping this state outside any repo is meant to prevent.
+    return Path(os.environ.get("GROWTH_LOOP_HOME") or DEFAULT_HOME).expanduser()
 
 
 def skill_roots():

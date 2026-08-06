@@ -78,5 +78,22 @@ class TestScriptConstraints(unittest.TestCase):
                                  "%s references %r" % (target.name, token))
 
 
+class TestEnvironmentDefaults(unittest.TestCase):
+    """A set-but-empty env var must fall back, not resolve to the cwd.
+
+    The behaviour is exercised end to end for gl-journey via --paths. Doing
+    the same for gl-nudge would make it write to the operator's real
+    ~/.claude/growth-loop, so its guarantee is pinned at the source instead.
+    """
+
+    def test_home_falls_back_on_an_empty_value(self):
+        for name in ("gl-journey", "gl-nudge"):
+            source = (BIN / name).read_text()
+            self.assertIn('os.environ.get("GROWTH_LOOP_HOME") or DEFAULT_HOME',
+                          source,
+                          "%s treats a set-but-empty GROWTH_LOOP_HOME as an "
+                          "override, resolving state into the cwd" % name)
+
+
 if __name__ == "__main__":
     unittest.main()

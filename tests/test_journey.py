@@ -141,5 +141,16 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertNotIn("never been invoked", out)
         self.assertIn("do not read the ledger count as usage", out)
 
+    def test_empty_home_is_not_treated_as_an_override(self):
+        # os.environ.get returns "" for a set-but-empty var rather than the
+        # default, and Path("") is Path("."), so `export GROWTH_LOOP_HOME=`
+        # resolved profile.md to a bare relative path — dropping it into
+        # whatever repository happened to be the working directory.
+        code, out, _ = run("gl-journey", ["--paths"], env={"GROWTH_LOOP_HOME": ""})
+        self.assertEqual(code, 0)
+        profile = [l for l in out.splitlines() if l.startswith("profile:")][0]
+        self.assertNotEqual(profile.strip(), "profile: profile.md")
+        self.assertIn("/.claude/growth-loop/profile.md", profile)
+
 if __name__ == "__main__":
     unittest.main()
