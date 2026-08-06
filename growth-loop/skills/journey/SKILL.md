@@ -23,7 +23,7 @@ exists; the narrowed one tells you what needs a decision today.
 
 ## The verdict
 
-Every item `gl-journey --stale 60` surfaces gets exactly one of three
+Every **skill** `gl-journey --stale 60` surfaces gets exactly one of three
 verdicts. No undecided leftovers.
 
 - **Delete** — it no longer applies, or should never have been written.
@@ -69,13 +69,23 @@ that plainly in the report rather than leaving it implied.
 
 ## Audit the description set
 
-Read every skill's description together, as a set, not one at a time. A
-description that looks fine in isolation can still overlap the neighbor it
+Read the descriptions **from the files**, not from the listing. The listing
+clips each one at 90 characters, which cuts the "use when …" clause — and
+that clause is the entire basis for the question below. Judging from the
+clipped form is judging with the evidence removed. Open each `SKILL.md` and
+read its frontmatter.
+
+Read them together, as a set, not one at a time. A description that looks
+fine in isolation can still overlap the neighbor it
 is never read next to. The question for each pairing: given a task,
 would exactly the right one fire? Two descriptions that both plausibly
 match the same task mean the wrong one sometimes wins; a description vague
 enough to match nothing in particular means none of them fire and the task
 gets redone from scratch instead of recalled.
+
+A description that mis-targets is `/growth-loop:refine`'s "fixing the
+description" case — route it there and say so in the report, rather than
+letting the audit end as an observation nobody acts on.
 
 ## Report
 
@@ -83,5 +93,6 @@ Give a short verdict, not the inventory. The user already ran `gl-journey`
 and can see the raw listing themselves; what this review owes them is the
 decisions it produced — what is recommended for deletion and why, what got
 corrected, what got kept and why, and any duplicates folded together with
-the loser named for deletion. Restating the table `gl-journey` already
+the loser named for deletion, and any descriptions routed to refine for
+mis-targeting. Restating the table `gl-journey` already
 printed tells them nothing they did not have before running this skill.

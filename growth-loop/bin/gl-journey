@@ -25,9 +25,12 @@ SKILL_ROOTS = ("~/.claude/skills", "./.claude/skills")
 # Memory files always checked in addition to <home>/profile.md. Adding one
 # widens the MEMORY section for every run, test fixtures included.
 MEMORY_FILES = ("~/.claude/CLAUDE.md", "./CLAUDE.md")
-# Age at which a skill needs a verdict. Raising it silences skills that
-# would otherwise be flagged for review; lowering it floods the SKILLS list
-# with false positives and trains the reader to skim past the flag.
+# Age at which a skill is flagged STALE in the listing. This drives the flag
+# and nothing else — the verdict journey forces comes from the --stale value
+# that skill passes, so raising this alone changes what the table looks like
+# and nothing about what gets decided. Raising it hides skills that would
+# otherwise catch a reviewer's eye; lowering it flags so many that the flag
+# stops being read.
 STALE_DAYS = 90
 # Fallback for GROWTH_LOOP_HOME. Changing this moves where a real run looks
 # for profile.md and ledger.jsonl when the env var is unset.

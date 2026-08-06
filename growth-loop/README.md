@@ -103,7 +103,7 @@ the clipped form as shown, prints every match across all roots so a
 shadowed skill cannot be deleted by mistake, and exits 1 when nothing
 matches so a miss is distinguishable from a hit.
 
-Run the first four from the same directory the install block left you in — the
+Run all five from the same directory the install block left you in — the
 inner `growth-loop/growth-loop/`, where `.claude-plugin/` and `bin/`
 actually live.
 
@@ -196,6 +196,8 @@ own distilled skills. Override the sweep with `GROWTH_LOOP_SKILL_ROOTS`, an
 | `COOLDOWN_SECONDS` | `bin/gl-nudge` | 21600 | At most one nudge per 6h, shared by both events |
 | `STALE_DAYS` | `bin/gl-journey` | 90 | Age at which a skill is flagged `STALE` in the listing |
 | `--stale 60` | `skills/journey/SKILL.md` | 60 | Age at which the monthly review forces a verdict |
+| `DEFAULT_MAX` | `bin/gl-recall` | 25 | Matches printed before the search stops — it reads newest first, so this is what decides how far back a search can reach |
+| `DEFAULT_DAYS` | `bin/gl-recall` | 90 | How far back the search window extends |
 | `SNIPPET_CHARS` | `bin/gl-recall` | 400 | Window around each transcript match |
 
 Those two ages are separate knobs, and only the second one drives the

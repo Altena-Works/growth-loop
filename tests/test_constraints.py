@@ -111,5 +111,59 @@ class TestEnvironmentDefaults(unittest.TestCase):
                         "firing inside its own cooldown window")
 
 
+class TestTuningTableMatchesTheSource(unittest.TestCase):
+    """The README's Tuning table is the only place these numbers are
+
+    explained, and the section tells the reader to go edit them. Nothing
+    checked that the documented value is the shipped one, so every default
+    could drift silently — the cooldown especially, which the README calls
+    the anti-habituation guarantee while only the existence of a cooldown
+    was pinned, never its value.
+    """
+
+    DOCUMENTED = {
+        "gl-nudge": [("MIN_TOOL_CALLS", "25"), ("MIN_EDITS", "3"),
+                     ("COOLDOWN_SECONDS", "21600")],
+        "gl-journey": [("STALE_DAYS", "90")],
+        "gl-recall": [("DEFAULT_MAX", "25"), ("DEFAULT_DAYS", "90"),
+                      ("SNIPPET_CHARS", "400")],
+    }
+
+    def setUp(self):
+        self.readme = (PLUGIN_ROOT / "README.md").read_text()
+
+    def test_every_documented_default_is_the_shipped_one(self):
+        for script, entries in self.DOCUMENTED.items():
+            source = (BIN / script).read_text()
+            for name, value in entries:
+                line = [l for l in source.splitlines()
+                        if l.startswith("%s = " % name)]
+                self.assertEqual(len(line), 1, "%s: %s not found" % (script, name))
+                actual = line[0].split("=", 1)[1].split("#")[0].strip()
+                # COOLDOWN_SECONDS ships as an expression (6 * 3600).
+                self.assertEqual(str(eval(actual, {}, {})), value,
+                                 "%s ships %s = %s but the README's Tuning "
+                                 "table documents %s"
+                                 % (script, name, actual, value))
+
+    def test_every_documented_default_appears_in_the_table(self):
+        table = [l for l in self.readme.splitlines()
+                 if l.startswith("| `") and l.count("|") >= 4]
+        documented = {row.split("|")[1].strip().strip("`") for row in table}
+        for script, entries in self.DOCUMENTED.items():
+            for name, _ in entries:
+                self.assertIn(name, documented,
+                              "%s is tunable but absent from the README table"
+                              % name)
+
+    def test_journeys_review_threshold_is_documented_where_it_lives(self):
+        # The verdict age is not a script constant - it is the --stale value
+        # journey passes. The table has to name that separately or a tuner
+        # edits STALE_DAYS and nothing about the review changes.
+        self.assertIn("skills/journey/SKILL.md", self.readme)
+        body = (PLUGIN_ROOT / "skills" / "journey" / "SKILL.md").read_text()
+        self.assertIn("--stale 60", body)
+
+
 if __name__ == "__main__":
     unittest.main()

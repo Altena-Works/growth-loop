@@ -24,6 +24,17 @@ def parse_frontmatter(path):
     return meta, "\n".join(lines[end + 1:])
 
 
+def flat(text):
+    """Collapse wrapping so an assertion does not depend on line breaks.
+
+    These files are hand-wrapped prose. Asserting on a phrase that happens
+    to straddle a newline fails for a reason that has nothing to do with
+    the requirement, and — worse — quietly passes when the phrase is
+    reworded around the break. Normalise, then assert on meaning.
+    """
+    return " ".join(text.split())
+
+
 def existing_skills():
     return sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md"))
 
@@ -119,8 +130,8 @@ class TestLearn(unittest.TestCase):
         # a slug collision destroys a skill silently - the one path where a
         # model-invoked skill could do what forget requires confirmation for.
         self.assertIn("Check the target does not already exist before writing",
-                      self.body)
-        self.assertIn("Do not overwrite it", self.body)
+                      flat(self.body))
+        self.assertIn("Do not overwrite it", flat(self.body))
 
     def test_does_not_instruct_a_hardcoded_skills_path(self):
         # Pinning one backticked spelling let the same defect back in under
@@ -141,9 +152,9 @@ class TestLearn(unittest.TestCase):
         # which is exactly when the resolved path has fallen out of view.
         index = self.body.index("## Delegating")
         section = self.body[index:]
-        self.assertIn("hand over their results", section)
-        self.assertIn("resolved absolute path", section)
-        self.assertIn("confirm that path is free", section)
+        self.assertIn("hand over their results", flat(section))
+        self.assertIn("resolved absolute path", flat(section))
+        self.assertIn("confirm that path is free", flat(section))
 
     def test_grants_only_the_script_it_actually_runs(self):
         # It carried Bash(echo:*) and Bash(cut:*) left over from a removed
@@ -155,6 +166,12 @@ class TestLearn(unittest.TestCase):
 
     def test_takes_arguments(self):
         self.assertIn("$ARGUMENTS", self.body)
+        # The README advertises /growth-loop:learn [dir|url] and names the
+        # URL branch as the plugin's one network touch, so both branches
+        # have to survive here for that to stay true.
+        section = self.body[self.body.index("## Handling $ARGUMENTS"):]
+        self.assertIn("a directory", section)
+        self.assertIn("a URL", section)
 
 
 class TestRefine(unittest.TestCase):
@@ -171,6 +188,12 @@ class TestRefine(unittest.TestCase):
     def test_routes_to_forget_when_beyond_repair(self):
         self.assertIn("/growth-loop:forget", self.body)
         self.assertIn("beyond repair", self.body)
+        # The route is only safe with the gate named: refine is
+        # model-invocable and holds Edit, so "route to forget" without this
+        # reads as something it may do itself. journey and profile pin the
+        # same sentence; refine's copy did not.
+        self.assertIn("cannot invoke it", flat(self.body))
+        self.assertIn("Do not delete the directory yourself", flat(self.body))
 
     def test_the_description_admits_review_driven_corrections(self):
         # The description is the gate: it is what a model reads to decide
@@ -187,7 +210,7 @@ class TestRefine(unittest.TestCase):
         # journey routes here: a keeper is not wrong, it is missing what
         # the loser documents.
         index = self.body.index("## When to write nothing")
-        self.assertIn("does not decline a merge", self.body[index:])
+        self.assertIn("does not decline a merge", flat(self.body[index:]))
 
     def test_fires_on_evidence_not_recency(self):
         # journey routes a duplicate merge here, but the old rule said
@@ -196,7 +219,7 @@ class TestRefine(unittest.TestCase):
         # go. The standard is evidence in view, which a review meets.
         self.assertIn("this session", self.body)
         self.assertIn("refine on evidence in front of you, never on a hunch",
-                      self.body)
+                      flat(self.body))
         self.assertIn("/growth-loop:journey", self.body)
 
 
@@ -214,18 +237,23 @@ class TestSkillAuthorAgent(unittest.TestCase):
         self.assertIn("exactly two things", self.body)
 
     def test_refuses_dead_end_free_skills(self):
+        # "What goes wrong" alone is satisfied by the template block and the
+        # section heading, so deleting the whole refusal left this green.
         self.assertIn("What goes wrong", self.body)
+        self.assertIn("do not invent one", flat(self.body))
+        self.assertIn("do not write the skill anyway", flat(self.body))
 
     def test_refuses_to_choose_its_own_write_path(self):
         # It has no ${CLAUDE_PLUGIN_ROOT}, so it cannot run gl-journey
         # --paths. Left to pick, the delegated branch writes to a hardcoded
         # root the review never reads - the defect learn had just been fixed
         # for, reintroduced through the subagent.
-        self.assertIn("Do not choose a path", self.body)
-        self.assertIn("ask for it and write nothing", self.body)
+        self.assertIn("Do not choose a path", flat(self.body))
+        self.assertIn("ask for it and write nothing", flat(self.body))
 
     def test_refuses_to_overwrite_an_existing_file(self):
-        self.assertIn("If a file already exists at that path, stop.", self.body)
+        self.assertIn("If a file already exists at that path, stop.",
+                      flat(self.body))
 
     def test_carries_the_same_template_learn_uses(self):
         # skill-author is the delegated path for the job learn does inline.
@@ -306,7 +334,8 @@ class TestProfile(unittest.TestCase):
         # reinforced" in a model-invocable skill whose closing rule is not
         # to announce the write - reaching, silently, the effect forget
         # requires showing the line and waiting for a human to reach.
-        self.assertIn("Propose those lines. Do not remove them here.", self.body)
+        self.assertIn("Propose those lines. Do not remove them here.",
+                      flat(self.body))
         self.assertIn("/growth-loop:forget", self.body)
 
     def test_routing_to_forget_says_the_model_cannot_invoke_it(self):
@@ -314,7 +343,7 @@ class TestProfile(unittest.TestCase):
         # Without it, "route to forget" reads as something the model does.
         index = self.body.index("/growth-loop:forget")
         window = self.body[max(0, index - 400):index + 400]
-        self.assertIn("cannot invoke", window)
+        self.assertIn("cannot invoke", flat(window))
 
     def test_states_the_line_cap(self):
         self.assertIn("60 lines", self.body)
@@ -356,9 +385,9 @@ class TestJourneySkill(unittest.TestCase):
         # the loser reached deletion around forget entirely.
         index = self.body.index("## Duplicates")
         section = self.body[index:self.body.index("## Audit")]
-        self.assertIn("recommend the loser for deletion and stop", section)
-        self.assertIn("Do not delete it here", section)
-        self.assertIn("cannot call", section)
+        self.assertIn("recommend the loser for deletion and stop", flat(section))
+        self.assertIn("Do not delete it here", flat(section))
+        self.assertIn("cannot call", flat(section))
 
     def test_audits_the_description_set(self):
         self.assertIn("would exactly the right one fire", self.body)
@@ -369,6 +398,26 @@ class TestJourneySkill(unittest.TestCase):
         # deleted", reintroducing the framing the Delete bullet suppresses.
         self.assertNotIn("what got deleted", self.body)
         self.assertIn("recommended for deletion", self.body)
+
+    def test_verdict_scope_is_skills_not_every_row(self):
+        # --stale narrows SKILLS only, so "every item it surfaces" demanded
+        # a delete/verify/keep call on CLAUDE.md and the ledger - and "no
+        # undecided leftovers" forbade skipping them. A live session had
+        # already misread a memory row this way.
+        self.assertIn("Every **skill** `gl-journey --stale 60` surfaces",
+                      flat(self.body))
+
+    def test_stale_scope_is_stated_where_the_reader_gathers(self):
+        # The script's behaviour is pinned in test_journey. This pins the
+        # prose that tells the model to expect it.
+        self.assertIn("narrows the SKILLS section only", flat(self.body))
+
+    def test_description_audit_reads_the_files_not_the_clipped_listing(self):
+        # The listing clips descriptions at DESC_CHARS, which cuts the
+        # "use when" clause the audit's whole question turns on.
+        self.assertIn("from the files", flat(self.body))
+        self.assertIn("Open each `SKILL.md` and read its frontmatter",
+                      flat(self.body))
 
     def test_reports_a_verdict_not_the_inventory(self):
         self.assertIn("not the inventory", self.body)
@@ -385,6 +434,14 @@ class TestForget(unittest.TestCase):
     def test_requires_confirmation_before_deleting(self):
         self.assertIn("Wait for confirmation", self.body)
 
+    def test_shows_the_content_before_asking(self):
+        # Confirmation without showing is a signature on a blank page, and
+        # forget's own description promises "after showing exactly what will
+        # be removed". Deleting the whole Show section left the suite green.
+        self.assertIn("## Show", self.body)
+        self.assertIn("print exactly what will be removed, not a summary",
+                      flat(self.body))
+
     def test_forbids_tombstones(self):
         self.assertIn("Delete, do not soften", self.body)
         self.assertIn("deprecated", self.body)
@@ -398,8 +455,8 @@ class TestForget(unittest.TestCase):
         # deleted items which were never located, never shown and never
         # confirmed, on the authority of a yes given for something else,
         # from inside the one skill built to be that gate.
-        self.assertIn("Report what you find. Do not delete it.", self.body)
-        self.assertIn("List the referrers and stop", self.body)
+        self.assertIn("Report what you find. Do not delete it.", flat(self.body))
+        self.assertIn("List the referrers and stop", flat(self.body))
 
     def test_uses_locate_and_handles_every_outcome(self):
         # Without a branch per outcome, a miss reads as "does not exist" and

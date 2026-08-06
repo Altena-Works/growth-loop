@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **126/126 pass**（`python3 tests/run.py`）
+- テスト **133/133 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 126テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 133テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -180,6 +180,17 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 | `learn` にディレクトリ | README から実際の行き止まりを抽出してテンプレート準拠で生成、`gl-journey` も認識 |
 
 この一巡で3件の欠陥が出た。下の「繰り越した指摘の処理」と、`gl-journey` の呼び出し回数主張・列崩れ・`skill-author` のテンプレート欠落。
+
+### 5巡目 — `--days` が届かない、他（2026-08-06）
+
+- **`recall` の「古い記憶なら `--days 365` で窓を広げろ」が機能しない。** `--days` は打ち切り日時を動かすだけで、検索は新しい順に読んで `--max`（既定25）で止まる。よく話題になる件では新しいセッションが枠を埋め尽くし、窓をどれだけ広げても古い方には到達しない。実測: 30件の新しい一致＋200日前の答えという構成で、`--days 365` は古い方に届かず、`--max 100` を足して初めて届いた。しかも**打ち切りが無言**で、「25 match(es) across 25 session(s)」は探し尽くした場合と見分けがつかない。切り詰めには必ず印を付ける、というこのリポジトリ自身の原則に反していた。打ち切りを明示する行を出し、`recall` に `--max` を併せて上げるよう書き、README の調整表に `DEFAULT_MAX` / `DEFAULT_DAYS` を追加
+- **`journey` の判定規則が「`--stale 60` が挙げた全ての項目」のままだった。** `--stale` が絞るのは SKILLS だけなので、文字通り読むと `CLAUDE.md` と ledger にも三択判定を要求し、「未決定を残すな」がそれを免除しない。9行上の Gather 節には前巡で注記を入れたが、実際に指示を出す文の側が直っていなかった
+- **description 監査が、判断の根拠を切り落とした入力で行われていた。** 監査の問いは「あるタスクでちょうど1つが発火するか」で、それを決めるのは description の「use when …」節。しかし材料である一覧は90文字で切っており、実測でこのプラグイン自身の6件すべてが trigger 節を失う。ファイルを開いて読む指示に変更し、mis-target は `refine` へ回して報告に載せる経路も追加
+- `STALE_DAYS` のコメント冒頭が、前巡で README から消した誤りをそのまま保持していた（調整表は読者を `bin/` へ送るのに、そこに逆の説明があった）
+
+**テスト側の空洞が6件。** うち `skill-author` の「行き止まりが無ければ書くな」、`refine` のゲート注記、`forget` の Show 節は、丸ごと削除してもテストが通っていた。README の調整表と実際の定数を突き合わせる検査も無く、`COOLDOWN_SECONDS` を 6h から 1秒に変えても緑のままだった。
+
+**行折り返しの罠に3度かかったので、構造的に潰した。** 散文へのアサーションは空白を正規化してから比較する（`flat()`）。改行位置に依存する検査は、要件と無関係な理由で落ち、要件が壊れても通りうる。
 
 ### 4巡目 — 契約修正が届いていなかった層（2026-08-06）
 

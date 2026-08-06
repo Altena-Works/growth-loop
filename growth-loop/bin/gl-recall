@@ -187,8 +187,16 @@ def main():
     pattern = build_pattern(args.query)
     hits = 0
     sessions = 0
-    for mtime, path in transcripts(roots, args.days):
+    capped = False
+    scanned = transcripts(roots, args.days)
+    for index, (mtime, path) in enumerate(scanned):
         if hits >= args.max_hits:
+            # Sessions are ordered newest first, so stopping here means the
+            # older ones were never read. Saying so matters: the cap is what
+            # makes --days useless on its own for an old memory, because a
+            # recurring topic fills the quota with recent sessions long
+            # before the window reaches back to the one being looked for.
+            capped = index < len(scanned)
             break
         session_hits = []
         for role, text in records(path):
@@ -210,6 +218,10 @@ def main():
             print("  %s: %s" % (role, snippet))
 
     print("\n%d match(es) across %d session(s)" % (hits, sessions))
+    if capped:
+        print("stopped at the --max limit of %d; %d older session(s) were not "
+              "read. Raise --max to reach further back."
+              % (args.max_hits, len(scanned) - sessions))
     return 0
 
 
