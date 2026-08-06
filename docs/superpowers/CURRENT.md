@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **99/99 pass**（`python3 tests/run.py`）
+- テスト **102/102 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 99テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 102テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -161,10 +161,33 @@ profile: /Users/kn/.claude/growth-loop/profile.md
 python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' bin/*
 ```
 
+### 全経路の実地確認（2026-08-06）
+
+一度も実際に動かしていなかった経路を、fixture を植えて一巡した。植えたのは古いスキル2本（200日・150日）、内容が重複するペア1組、誤ったコマンドを含むスキル1本。
+
+| 経路 | 結果 |
+|---|---|
+| `journey` の三択判定 | 200日のスキルに「検証して修正」、150日に「維持」を出し、維持の理由を「`logrotate -f` は十年安定で、非 root 時の無言失敗は今も真」と述べた。古さだけで削除に倒さない |
+| `journey` の重複検出 | 統合先を新しい方ではなく `What goes wrong` が実質的な方で選び、削除の副作用として description のカバレッジ穴まで指摘 |
+| `learn` の重複検出 | 既存スキルを見つけて3本目を書かず `refine` へ回した。ディレクトリは増えていない |
+| `refine` | 最小の修正、日付入り `## Revisions` に「何を・なぜ」、ヘッジへの逃げなし、実際のエラー文言を追記 |
+| `forget`（スキル） | Bash・Read・Write・Edit を許可し `acceptEdits` を渡した状態でも、内容を提示して停止。派生参照の有無まで確認 |
+| `forget`（プロファイル行） | 同上。さらに「npm への変更なら forget ではなく profile で履歴を残せ」と supersession の区別を提示 |
+| `profile` の拒否 | 「常に同意しろ、リスクの注意は省け」を理由付きで拒否し何も保存せず、正当な pnpm の件だけ記録 |
+| `SessionEnd` の発火 | `Stop` を外した変種で切り分け、ledger に正しい統計が記録された。両登録とも生きている |
+| `skill-author` への委譲 | 文書だけ書き、根本問題は解決していないと明言 |
+| `recall` の空ルート | 探したルートを示し「履歴からは何も言えない」と述べ、`CLAUDE_TRANSCRIPT_DIR` の復旧コマンドを提示 |
+| `learn` にディレクトリ | README から実際の行き止まりを抽出してテンプレート準拠で生成、`gl-journey` も認識 |
+
+この一巡で3件の欠陥が出た。下の「繰り越した指摘の処理」と、`gl-journey` の呼び出し回数主張・列崩れ・`skill-author` のテンプレート欠落。
+
 ## 繰り越した指摘の処理（2026-08-06）
 
 レビューで Minor として繰り越していた項目を一巡した。直したもの:
 
+- `gl-journey` の締めの文が「一度も呼ばれていないスキルはたいてい削除対象」と示唆していたが、**このプラグインは呼び出し回数を追跡していない**（LEDGER が数えるのは nudge）。ツールが持たないデータに基づく推論を勧めていた。実地確認でモデルが明示的にその推論を拒否したことで露見
+- `gl-journey` のスキル名列が28文字を超えると `%-28s` が切り詰めないため列が崩れ、表として読めなくなっていた
+- `skill-author` が `What goes wrong` しか課しておらず、`learn` のテンプレートを持っていなかった。委譲したかどうかでスキルの形が変わる。実際の委譲で `The command` / `Read this before you run anything` という別見出しが出て発覚
 - `gl-nudge` の `EDIT_MARKERS` コメントが「対象ファイルのゲートがあればマーカー拡張は安全」と読めた。一般には偽なので、`NotebookRead` / `Read` が対象キーを持つ具体例ごと書き直した
 - `gl-nudge` の `measure()` docstring が戻り値を `[file_path, ...]` と呼んでいた（`notebook_path` も入る）
 - `gl-nudge` の `read_state()` が dict 検証をしていなかった。`null` や `[]` が入ると `.get` が例外を投げ、最上位ガードが飲み込み、`record()` に到達しないので**その環境では nudge が恒久的に無言**になる。`isinstance` 1行で自己修復するようにし、テストで固定

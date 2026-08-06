@@ -154,9 +154,11 @@ growth-loop/
 
 State lives outside the plugin, in `~/.claude/growth-loop/` — `profile.md`,
 `ledger.jsonl`, `nudge-state.json` — overridable with `GROWTH_LOOP_HOME`.
-Distilled skills are written to `~/.claude/skills/<slug>/SKILL.md`, not
+Distilled skills go to `~/.claude/skills/<slug>/SKILL.md` by default — not
 inside this plugin, so they load globally across every project and survive
-this plugin being removed.
+this plugin being removed. `GROWTH_LOOP_SKILL_ROOTS` moves that target; the
+skills resolve it rather than assuming it, so the write always lands where
+the review reads.
 
 `gl-journey --paths` prints the two write targets it has resolved:
 
