@@ -63,8 +63,8 @@ move is to shrink this plugin, not to keep both.
 ## Install
 
 ```bash
-git clone <repo> growth-loop
-cd growth-loop/growth-loop
+git clone git@github.com:Altena-Works/growth-loop.git
+cd growth-loop/growth-loop            # the plugin is nested one level down
 chmod +x bin/*                    # required — the Stop hook depends on it
 claude --plugin-dir .
 ```

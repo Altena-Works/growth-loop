@@ -13,10 +13,18 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **143/143 pass**（`python3 tests/run.py`）
+- テスト **144/144 pass**（`python3 tests/run.py`、2026-08-06 再確認）
 - `claude plugin validate ./growth-loop` → Validation passed
-- 未コミットの変更なし
+- 未コミットの変更は比較調査報告書と、この状態文書の更新のみ
 - **push はしていない。GitHub リポジトリは未作成。**
+
+### 競合・隣接プロジェクト調査（2026-08-06）
+
+ルート直下に [`SELF_IMPROVEMENT_COMPARISON.md`](../../SELF_IMPROVEMENT_COMPARISON.md) を作成した。SkillClaw、EvoSkill、pskoett/self-improving-agent、Hermes Agent を主対象とし、Gemini CLI Auto Memory、skill-extractor、claude-smart、CoEvoSkills、HEBBS も調べた。外部製品は公式リポジトリ、公式文書、著者論文による机上比較で、インストールして同一タスクを走らせた評価ではない。
+
+調査で確定した位置付けは、growth-loop をフルエージェントや集合学習基盤へ広げず、**Claude Code に追加するローカルで監査可能な学習ライフサイクル層**として維持すること。強みは小ささ、平文の学習物、作成から削除までの閉ループ、モデル外の決定的処理。主な欠落は、改善効果の測定、書き込み前の候補箱、構造化した証拠と系譜、検索索引、安全検査、同時書き込み対策、可逆なアーカイブである。
+
+改善実装は未着手。現在の実運用で基準値を取り、その証拠を基に P0 の候補箱、アトミック更新、機械可読契約、ヘッドレス会話テストを仕様化する。大きな変更になるため、着手時は `spec-first-development` で受け入れ条件を承認してから進める。
 
 ### 実セッションで確認済み（2026-08-05）
 
@@ -65,7 +73,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 143テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 144テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -358,3 +366,4 @@ claude plugin install growth-loop@growth-loop-local
 1. `/hooks` の表示確認（残る唯一の未確認項目。発火自体は確認済みなので優先度は低い）
 2. GitHub リポジトリ作成と push（**未承認。push は都度承認が要る**）
 3. 実運用でしばらく使い、`MIN_TOOL_CALLS` / `MIN_EDITS` / `COOLDOWN_SECONDS` を体感に合わせる。README にも書いたが、緩めるのは「鳴ってほしかった」と思ってからにする。慣れてしまってから締め直しても habituation は戻らない
+4. 実運用の証拠が揃った後、比較調査報告の P0 改善を仕様化する。現時点では未承認・未着手で、機能上の blocker はない
