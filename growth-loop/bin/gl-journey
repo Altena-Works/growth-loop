@@ -35,6 +35,15 @@ DEFAULT_HOME = "~/.claude/growth-loop"
 # Truncation width for skill descriptions in the SKILLS table. Raising it
 # widens every row and risks wrapping in a narrow terminal.
 DESC_CHARS = 90
+# Column width for skill names. A name longer than this is clipped rather
+# than allowed to push the age and description columns out of line, which
+# stops the listing being readable as a table at all.
+NAME_CHARS = 28
+
+
+def clip(text, limit):
+    """Truncate with a visible marker, so a cut is never read as an ending."""
+    return text if len(text) <= limit else text[:limit - 3] + "..."
 
 
 def home():
@@ -125,10 +134,9 @@ def main():
             continue
         shown += 1
         flag = "STALE " if age >= STALE_DAYS else "      "
-        desc = description_of(path)
-        if len(desc) > DESC_CHARS:
-            desc = desc[:DESC_CHARS - 3] + "..."
-        print("%s%-28s %5s  %s" % (flag, name, "%dd" % int(age), desc))
+        desc = clip(description_of(path), DESC_CHARS)
+        print("%s%-*s %5s  %s"
+              % (flag, NAME_CHARS, clip(name, NAME_CHARS), "%dd" % int(age), desc))
     if shown == 0:
         print("  (none)")
 
@@ -153,9 +161,16 @@ def main():
         count = 0
     print("  %d nudge(s) recorded in %s" % (count, home() / "ledger.jsonl"))
 
+    # The spec's closing line called a never-invoked skill probably-finished
+    # work. Nothing here tracks invocations — the ledger counts nudges, not
+    # skill runs — so that sentence invited an inference off data this tool
+    # does not have. Age is what it actually knows; the deciding question is
+    # whether the thing the skill describes still exists.
     print("\nStale means one of two things and you have to say which: finished "
-          "work to delete, or drifted knowledge to re-verify. A skill that has "
-          "never been invoked is usually the former.")
+          "work to delete, or drifted knowledge to re-verify. Age alone does "
+          "not separate them — ask whether the thing the skill describes is "
+          "still there. Nothing here records how often a skill ran, so do not "
+          "read the ledger count as usage.")
     return 0
 
 

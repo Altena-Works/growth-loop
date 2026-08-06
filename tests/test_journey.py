@@ -120,5 +120,26 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertIn("/.claude/skills", out)
         self.assertIn("/.claude/growth-loop/profile.md", out)
 
+    def test_long_skill_name_is_clipped_to_keep_columns_aligned(self):
+        # %-28s does not truncate, so a longer name pushed the age and
+        # description columns out of line and the listing stopped being a
+        # table.
+        long_name = "reindex-search-after-schema-change"
+        write_skill(self.skills / long_name / "SKILL.md", "Rebuilds the index")
+        write_skill(self.skills / "short" / "SKILL.md", "Short one")
+        code, out, _ = run("gl-journey", [], env=self.env)
+        self.assertEqual(code, 0)
+        rows = [l for l in out.splitlines() if l.endswith(("Rebuilds the index", "Short one"))]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len({r.index("d  ") for r in rows}), 1,
+                         "age column is not aligned across rows:\n%s" % "\n".join(rows))
+
+    def test_closing_prompt_claims_no_invocation_data(self):
+        # Nothing tracks how often a skill ran - the ledger counts nudges.
+        # The closing line must not invite an inference off data absent here.
+        _, out, _ = run("gl-journey", [], env=self.env)
+        self.assertNotIn("never been invoked", out)
+        self.assertIn("do not read the ledger count as usage", out)
+
 if __name__ == "__main__":
     unittest.main()
