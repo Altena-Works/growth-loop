@@ -159,6 +159,21 @@ class TestSkillAuthorAgent(unittest.TestCase):
     def test_refuses_dead_end_free_skills(self):
         self.assertIn("What goes wrong", self.body)
 
+    def test_carries_the_same_template_learn_uses(self):
+        # skill-author is the delegated path for the job learn does inline.
+        # It mandated only "What goes wrong", so a delegated skill came out
+        # with different headings than an inline one - measured in a live
+        # dispatch, which produced "The command" and "Read this before you
+        # run anything" instead. Two shapes in one library is unskimmable,
+        # and journey's duplicate hunt compares these sections directly.
+        learn_body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "learn" / "SKILL.md")[1]
+        for heading in ("## When this applies", "## The approach",
+                        "## What goes wrong"):
+            self.assertIn(heading, learn_body, "learn lost %s" % heading)
+            self.assertIn(heading, self.body,
+                          "skill-author does not mandate %s" % heading)
+
 
 class TestRecall(unittest.TestCase):
     def setUp(self):

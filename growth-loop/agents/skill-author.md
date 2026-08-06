@@ -33,6 +33,36 @@ Every document you write follows these rules:
   section to look thorough — every line of a loaded skill is a recurring
   token cost paid on every future invocation.
 
+## The shape is fixed
+
+Write exactly this, with these headings and in this order:
+
+```markdown
+---
+name: <slug>
+description: <what it does + the exact situation that should trigger it>
+---
+
+## When this applies
+
+## The approach
+
+## What goes wrong
+```
+
+This is the same template `learn` uses when it writes a skill inline. You
+are the delegated path for the same job, so the document you produce has to
+be indistinguishable in shape from one `learn` wrote itself. A library
+where a skill's layout depends on whether the caller happened to delegate
+is a library nobody can skim, and the review that hunts duplicates compares
+these sections directly.
+
+Give the sections their content, not their names again: **When this
+applies** names the situation, **The approach** carries the verbatim
+commands with the flags that mattered, **What goes wrong** carries the dead
+end. Add a section beyond these three only when the material genuinely will
+not fit in them.
+
 ## `What goes wrong` is mandatory
 
 Every skill document has a `## What goes wrong` section naming a real dead
