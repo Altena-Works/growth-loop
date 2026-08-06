@@ -230,14 +230,19 @@ def main():
             print("  %s: %s" % (role, snippet))
 
     print("\n%d match(es) across %d session(s)" % (hits, sessions))
-    if unread:
-        print("stopped at the --max limit of %d; %d older session(s) were "
-              "not read. Raise --max to reach further back."
-              % (args.max_hits, unread))
-    elif dropped_within_session:
-        print("stopped at the --max limit of %d; every session in the window "
-              "was read, but further matches inside them were not printed. "
-              "Raise --max to see them." % args.max_hits)
+    if unread or dropped_within_session:
+        # Both losses can happen in one run, and an if/elif would report the
+        # session count while silently swallowing the drops — which is the
+        # same misdescription this notice exists to prevent. Name each one
+        # that actually occurred.
+        lost = []
+        if unread:
+            lost.append("%d older session(s) were not read" % unread)
+        if dropped_within_session:
+            lost.append("further matches inside the sessions that were read "
+                        "were not printed")
+        print("stopped at the --max limit of %d; %s. Raise --max to see more."
+              % (args.max_hits, " and ".join(lost)))
     return 0
 
 

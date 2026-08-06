@@ -112,6 +112,25 @@ class TestRecall(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("stopped at the --max limit", out)
 
+    def test_the_notice_names_every_loss_that_occurred(self):
+        # An if/elif reported the session count and silently swallowed the
+        # drops, while recall's body promised the notice says which. Both
+        # losses happen together whenever a capping session holds more.
+        aged = self.root / "projects" / "both"
+        for i in range(2):
+            path = write_transcript(aged / ("b%d.jsonl" % i),
+                                    user_text="BOTHWORD one",
+                                    assistant_text="BOTHWORD two")
+            stamp = time.time() - (20 + i) * 86400
+            os.utime(path, (stamp, stamp))
+        code, out, _ = run("gl-recall", ["BOTHWORD", "--days", "365",
+                                         "--max", "1"], env=self.env)
+        self.assertEqual(code, 0)
+        tail = out[out.index("stopped at the"):]
+        self.assertIn("older session(s) were not read", tail)
+        self.assertIn("further matches inside the sessions that were read "
+                      "were not printed", tail)
+
     def test_an_exact_fit_is_not_reported_as_a_truncation(self):
         # The inverse of the defect above: a search whose matches land
         # exactly on --max has dropped nothing, and saying otherwise makes

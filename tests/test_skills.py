@@ -219,7 +219,13 @@ class TestRefine(unittest.TestCase):
         # journey routes here: a keeper is not wrong, it is missing what
         # the loser documents.
         index = self.body.index("## When to write nothing")
-        self.assertIn("does not decline a merge", flat(self.body[index:]))
+        # Both inbound routes from journey, not just the merge: the second
+        # was added a round later and the carve-out was not extended, which
+        # is the same miss this test exists for.
+        section = flat(self.body[index:])
+        self.assertIn("declines neither route that `/growth-loop:journey` "
+                      "sends here", section)
+        self.assertIn("narrowing an overlapping description", section)
 
     def test_accepts_a_review_found_description_overlap(self):
         # journey routes these here; without the trigger and the matching
@@ -464,6 +470,14 @@ class TestJourneySkill(unittest.TestCase):
         self.assertIn("Route it there and say so in the report", section)
         self.assertIn("do not send it there", section)
         self.assertIn("descriptions routed to refine for", section)
+
+    def test_audit_names_the_trailing_dots_as_required(self):
+        # --locate prefix-matches only when the query ends in "..." (a
+        # round-3 restriction). forget says to paste the name as printed;
+        # journey's newer copy did not, so a model could strip the suffix
+        # and get a miss on a name that exists.
+        section = flat(self.body[self.body.index("## Audit the description set"):])
+        self.assertIn("trailing `...` included", section)
 
     def test_audit_resolves_files_with_locate_not_paths(self):
         # --paths reports the first root only, so globbing it audits a

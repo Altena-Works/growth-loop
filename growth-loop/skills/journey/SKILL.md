@@ -50,7 +50,9 @@ first is the one followed, correct or not, and the reader has no way to
 know a second version exists. When two overlap, merge into the one with
 the better **What goes wrong** section, not the newer one: the dead ends it
 documents are the irreplaceable part, and a newer skill that has not yet
-failed at anything has nothing there to lose.
+failed at anything has nothing there to lose. Comparing those sections
+means opening both files, so resolve them the same way the description
+audit below does — `gl-journey --locate`, not a path you assembled.
 
 A merge has two halves and you perform only the first. Fold what the loser
 has that the keeper lacks into the keeper — that is a correction, so route
@@ -81,7 +83,9 @@ each to a file before opening it:
 "${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --locate <name as the listing prints it>
 ```
 
-It accepts the clipped form and prints the directory, across every root.
+It accepts the clipped name exactly as printed, trailing `...` included —
+that suffix is what tells it a prefix match is wanted — and prints the
+directory, across every root.
 Do not glob the `skills-root:` from `--paths` instead: that reports the
 first root only, so on a machine with more than one you would audit a
 subset of the set you just listed and answer the question below wrong by

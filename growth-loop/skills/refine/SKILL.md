@@ -101,7 +101,10 @@ quite matching this session's flavor of the task — but not actually wrong,
 needs no edit. Do not churn a skill just because it could be phrased
 better; refine corrects errors, it does not polish prose.
 
-Missing is not the same as merely unhelpful. A keeper that lacks the dead
-end its duplicate documents **is** wrong for the reader who follows it into
-that dead end, so folding one in is a correction, not polish — this rule
-does not decline a merge routed here by `/growth-loop:journey`.
+Missing is not the same as merely unhelpful, and neither is overlapping.
+A keeper that lacks the dead end its duplicate documents **is** wrong for
+the reader who follows it into that dead end; two descriptions that both
+claim one task **are** wrong for the reader whose task fires the wrong one.
+Folding in a dead end and narrowing an overlapping description are both
+corrections, not polish — this rule declines neither route that
+`/growth-loop:journey` sends here.

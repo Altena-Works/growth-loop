@@ -21,12 +21,13 @@ fills with recent sessions and the older one is never read, however far
 back the window goes.
 
 Any line beginning `stopped at the --max limit` means something was left
-out, and it says which: **older session(s) were not read** — the case
-above, where the window never got that far back — or **every session in
-the window was read** but further matches inside them were not printed.
-Raise `--max` and run it again before concluding anything about what the
-history holds. No such line means the search was complete; do not re-run
-it looking for more.
+out, and it names each loss that occurred: **older session(s) were not
+read** — the case above, where the window never reached that far back —
+and/or **further matches inside the sessions that were read were not
+printed**. Both can be true at once, and then both are listed. Raise
+`--max` and run it again before concluding anything about what the history
+holds. No such line means the search was complete; do not re-run it looking
+for more.
 
 If the first pass comes back thin, widen the query with the concrete strings
 that would actually appear in a transcript — error text, filenames, command
