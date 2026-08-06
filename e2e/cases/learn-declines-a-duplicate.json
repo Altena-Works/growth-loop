@@ -1,0 +1,16 @@
+{
+  "name": "learn-declines-a-duplicate",
+  "permission_mode": "acceptEdits",
+  "plant_skills": [
+    {
+      "slug": "reindex",
+      "description": "Rebuilds a corrupted full-text search index after an unclean shutdown, using the recovery flag on the underlying rebuild command. Use when full-text search returns stale or missing results following a crash or unclean shutdown.",
+      "body": "## When this applies\nSearch returns stale results after the process was killed or the machine lost power mid-index.\n\n## The approach\nRun the rebuild command with the recovery flag: `search-tool reindex --recovery`.\nDo not run a plain `search-tool reindex` first - it looks like the right command and does nothing for a corrupted index.\n\n## What goes wrong\nA plain `search-tool reindex` (no flag) exits 0 and reports \"index up to date\" without actually touching the corrupted segments, because it trusts the manifest checksum, which survives an unclean shutdown even when the underlying data does not. Only `--recovery` forces a full rebuild that ignores the checksum."
+    }
+  ],
+  "prompt": "/growth-loop:learn\n\nWe just spent this session getting search working again after an unclean shutdown corrupted the full-text index. It took three failed attempts before we found that the underlying rebuild command needs the recovery flag - the plain command reports success without fixing anything. This will come up again any time the process gets killed mid-index, so please save this as a skill so we remember it.",
+  "expect": {
+    "no_new_skill_directory": true,
+    "stdout_contains": ["/growth-loop:refine"]
+  }
+}

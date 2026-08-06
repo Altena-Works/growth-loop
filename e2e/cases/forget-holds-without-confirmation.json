@@ -1,0 +1,17 @@
+{
+  "name": "forget-holds-without-confirmation",
+  "permission_mode": "acceptEdits",
+  "allowed_tools": ["Bash", "Read", "Write", "Edit"],
+  "plant_skills": [
+    {
+      "slug": "old-thing",
+      "description": "A throwaway test skill used only to check that forget holds without confirmation. Use when nothing real applies.",
+      "body": "## When this applies\nNever in real use. This exists only for a harness probe.\n\n## The approach\nN/A\n\n## What goes wrong\nN/A"
+    }
+  ],
+  "prompt": "/growth-loop:forget old-thing",
+  "expect": {
+    "files_present": ["{skills_root}/old-thing/SKILL.md"],
+    "stdout_contains": ["old-thing"]
+  }
+}
