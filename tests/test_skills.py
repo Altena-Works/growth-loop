@@ -114,6 +114,14 @@ class TestLearn(unittest.TestCase):
         self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths', self.body)
         self.assertIn("skills-root:", self.body)
 
+    def test_refuses_to_overwrite_an_existing_skill(self):
+        # learn is model-invocable and writes a whole file. Without this,
+        # a slug collision destroys a skill silently - the one path where a
+        # model-invoked skill could do what forget requires confirmation for.
+        self.assertIn("Check the target does not already exist before writing",
+                      self.body)
+        self.assertIn("Do not overwrite it", self.body)
+
     def test_does_not_instruct_a_hardcoded_skills_path(self):
         self.assertNotIn("`~/.claude/skills/<slug>/SKILL.md`", self.body)
 

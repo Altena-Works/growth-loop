@@ -69,6 +69,21 @@ command containing an expansion, and the skill then falls back to guessing.
 The directory sits outside the plugin on purpose, so a distilled skill
 survives `growth-loop` itself being removed.
 
+**Check the target does not already exist before writing.** If
+`<slug>/SKILL.md` is already there, stop. Do not overwrite it and do not
+quietly pick `<slug>-2`. Writing over a skill destroys it exactly as much
+as deleting it would, and this is the one place in the loop where a
+model-invoked skill could do that without anyone being shown what was lost
+— `forget` requires showing the content and waiting for confirmation, so
+this path must not become the way around that.
+
+Two things reach this point. Either the existing skill covers the same
+ground, which the overlap check above should have caught, and the answer is
+`/growth-loop:refine`. Or the slug collides on unrelated content, and the
+answer is a different slug that names this skill's situation more
+precisely — report the collision either way rather than resolving it
+silently.
+
 ## The template
 
 ```markdown
