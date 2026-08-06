@@ -10,6 +10,9 @@ description: Corrects a stored skill against evidence in front of you - a step t
 - A better route was found while following the skill's documented one.
 - The right skill did not fire for a task it obviously matched, or a wrong
   one fired instead.
+- A review found two descriptions that both plausibly claim the same task,
+  so whichever fires first wins regardless of which is right — the files
+  are in front of you, which is the same standard a merge meets.
 
 Also, when a review puts two skills side by side and one has to absorb
 what the other documents. That is a correction with both files in view, so

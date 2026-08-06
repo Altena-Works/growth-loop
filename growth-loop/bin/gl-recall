@@ -188,6 +188,7 @@ def main():
     hits = 0
     sessions = 0
     capped = False
+    unread = 0
     scanned = transcripts(roots, args.days)
     for index, (mtime, path) in enumerate(scanned):
         if hits >= args.max_hits:
@@ -196,7 +197,13 @@ def main():
             # makes --days useless on its own for an old memory, because a
             # recurring topic fills the quota with recent sessions long
             # before the window reaches back to the one being looked for.
-            capped = index < len(scanned)
+            # index is how many sessions were read, matched or not.
+            # `sessions` counts only those that matched, so using it here
+            # reported nearly every transcript as unread on any selective
+            # query — and this number is the whole basis for deciding how
+            # far to raise --max.
+            unread = len(scanned) - index
+            capped = unread > 0
             break
         session_hits = []
         for role, text in records(path):
@@ -218,10 +225,19 @@ def main():
             print("  %s: %s" % (role, snippet))
 
     print("\n%d match(es) across %d session(s)" % (hits, sessions))
-    if capped:
-        print("stopped at the --max limit of %d; %d older session(s) were not "
-              "read. Raise --max to reach further back."
-              % (args.max_hits, len(scanned) - sessions))
+    if hits >= args.max_hits:
+        # Fires whether or not sessions remain: a cap filled on the last
+        # session still dropped matches, and printing nothing there is
+        # byte-identical to an exhausted search. A cut is never read as an
+        # ending.
+        if capped:
+            print("stopped at the --max limit of %d; %d older session(s) were "
+                  "not read. Raise --max to reach further back."
+                  % (args.max_hits, unread))
+        else:
+            print("stopped at the --max limit of %d; every session in the "
+                  "window was read, but later matches inside them were "
+                  "dropped. Raise --max to see them." % args.max_hits)
     return 0
 
 

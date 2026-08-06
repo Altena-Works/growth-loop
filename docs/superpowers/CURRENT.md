@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **133/133 pass**（`python3 tests/run.py`）
+- テスト **138/138 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 133テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 138テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -180,6 +180,21 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 | `learn` にディレクトリ | README から実際の行き止まりを抽出してテンプレート準拠で生成、`gl-journey` も認識 |
 
 この一巡で3件の欠陥が出た。下の「繰り越した指摘の処理」と、`gl-journey` の呼び出し回数主張・列崩れ・`skill-author` のテンプレート欠落。
+
+### 6巡目 — 前巡の修正が1つ「消えていた」（2026-08-06）
+
+**前巡で `recall` に入れたはずの `--max` の記述が、実際にはファイルに入っていなかった。** `str.replace()` のアンカーが実際の文面と一致しておらず、Python は黙って何もしないまま通した。テストも無かったので緑のまま、コミットメッセージだけが直したと主張していた。つまり丸一巡、「`--days 365` で窓を広げろ」という**実測で効かないと分かっている助言**が出荷されたままだった。
+
+以後、文面の置換は必ずアンカーの存在を検査してから行う（`/tmp/edit.py`）。**アンカーが無ければ落ちる**。
+
+他に出たもの:
+
+- **打ち切り通知の件数が誤り。** `len(scanned) - sessions` は「一致したセッション数」を引いており、読んだが一致しなかったものを未読に数えていた。選択的なクエリでは実質「持っている全 transcript」に近い数を報告する。しかもこの数字は「`--max` をどこまで上げるか」の唯一の判断材料。`len(scanned) - index` に修正
+- **最後のセッションで打ち切りが埋まった場合、通知が出なかった。** 一致は捨てられているのに、探し尽くした場合と出力が完全に同一になる。このリポジトリ自身の「切り詰めには必ず印を付ける」に反する。両方の場合を区別して出すよう変更
+- `journey` の description が本文より1巡遅れていた（本文は「every skill」に狭めたが description は「each stale item」のまま）。4巡目で学んだはずの「description は別surface」がまた出た
+- `journey` の description 監査が `refine` に回す経路のうち、「曖昧すぎて何も発火しない」ケースは `refine` の「推測では直さない」に抵触する。重なりは証拠だが、曖昧さは予測。前者だけを回し、後者は報告に留める形に
+
+**テストの空洞が5件。** うち `forget` の「ディレクトリごと削除」は、`<slug>/` が `<slug>/SKILL.md` の部分文字列なので**まさにその退行で通っていた**。
 
 ### 5巡目 — `--days` が届かない、他（2026-08-06）
 

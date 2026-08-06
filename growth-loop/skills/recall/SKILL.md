@@ -9,9 +9,18 @@ allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall:*)
 
 Run `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall "<query>"`. Start with the user's
 own words — the phrase they just used is the one most likely to appear in
-the transcript that recorded it. If the memory is old, widen the window with
-`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall "<query>" --days 365`; the default
-window is shorter and will miss it.
+the transcript that recorded it. If the memory is old, widen the window **and raise the cap together**:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-recall "<query>" --days 365 --max 100
+```
+
+`--days` alone will not reach it. The search reads newest first and stops
+at `--max` (default 25), so on any topic that comes up regularly the quota
+fills with recent sessions and the older one is never read, however far
+back the window goes. When the output ends with `stopped at the --max
+limit`, that is exactly what happened — raise `--max` and run it again
+before concluding anything about what the history holds.
 
 If the first pass comes back thin, widen the query with the concrete strings
 that would actually appear in a transcript — error text, filenames, command

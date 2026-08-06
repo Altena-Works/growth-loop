@@ -53,12 +53,15 @@ class TestSkillFrontmatter(unittest.TestCase):
             self.assertLessEqual(len(combined), DESCRIPTION_CAP, path)
 
     def test_description_states_when_not_just_what(self):
-        # A description without a trigger clause cannot be selected on.
+        # A bare "when" passes on any prose - deleting learn's entire "Use
+        # when the user says ..." clause left this green because an
+        # incidental "when" survived elsewhere in the sentence. Require the
+        # clause that actually names triggering situations.
         for path in existing_skills():
             meta, _ = parse_frontmatter(path)
-            text = (meta.get("description", "") + " " + meta.get("when_to_use", "")).lower()
-            self.assertTrue(any(w in text for w in ("when ", "after ", "the moment")),
-                            "%s description names no trigger situation" % path)
+            text = (meta.get("description", "") + " " + meta.get("when_to_use", ""))
+            self.assertTrue(any(c in text for c in ("Use when", "Run this", "use when")),
+                            "%s description has no explicit trigger clause" % path)
 
     def test_invocation_flags(self):
         for name in USER_INVOKED_ONLY:
@@ -183,7 +186,13 @@ class TestRefine(unittest.TestCase):
         self.assertIn("Read the whole file", self.body)
 
     def test_requires_a_dated_revisions_entry(self):
+        # "## Revisions" survives in the code fence, so the heading alone
+        # pinned neither the date nor the reason - and the reason is what
+        # stops the next reader reinstating the step that was just removed.
         self.assertIn("## Revisions", self.body)
+        flattened = flat(self.body)
+        self.assertIn("dated entry", flattened)
+        self.assertIn("what changed **and why**", flattened)
 
     def test_routes_to_forget_when_beyond_repair(self):
         self.assertIn("/growth-loop:forget", self.body)
@@ -286,7 +295,19 @@ class TestRecall(unittest.TestCase):
             self.assertIn(cue, self.body)
 
     def test_never_dumps_raw_output(self):
-        self.assertIn("conclusion first", self.body.lower())
+        # "conclusion first" survived deleting the no-dumping rule outright.
+        self.assertIn("conclusion first", flat(self.body).lower())
+        self.assertIn("Never dump raw", flat(self.body))
+
+    def test_says_to_raise_max_not_just_days_for_an_old_memory(self):
+        # --days only moves the cutoff; the search reads newest first and
+        # stops at --max, so on a recurring topic the quota fills with
+        # recent sessions and the old one is never reached. This skill
+        # documented --days alone for a full round after that was measured.
+        # A stray mention of --max elsewhere in the section is not the
+        # point: the command the reader copies has to carry it.
+        self.assertIn('--days 365 --max', flat(self.body))
+        self.assertIn("stopped at the --max limit", flat(self.body))
 
     def test_empty_state_directs_to_the_env_var(self):
         self.assertIn("CLAUDE_TRANSCRIPT_DIR", self.body)
@@ -399,6 +420,12 @@ class TestJourneySkill(unittest.TestCase):
         self.assertNotIn("what got deleted", self.body)
         self.assertIn("recommended for deletion", self.body)
 
+    def test_description_scope_matches_the_body(self):
+        # The body was narrowed to "every skill" a round before the
+        # description was, and the description is what a model reads first.
+        self.assertIn("every stale skill", self.meta["description"])
+        self.assertNotIn("each stale item", self.meta["description"])
+
     def test_verdict_scope_is_skills_not_every_row(self):
         # --stale narrows SKILLS only, so "every item it surfaces" demanded
         # a delete/verify/keep call on CLAUDE.md and the ledger - and "no
@@ -446,8 +473,13 @@ class TestForget(unittest.TestCase):
         self.assertIn("Delete, do not soften", self.body)
         self.assertIn("deprecated", self.body)
 
-    def test_deletes_the_whole_directory(self):
-        self.assertIn("<slug>/", self.body)
+    def test_deletes_the_whole_directory_not_just_the_file(self):
+        # "<slug>/" is a substring of "<slug>/SKILL.md", so the old
+        # assertion passed on the exact regression it named. The directory
+        # matters: --locate prints a directory precisely because that is
+        # what gets removed, supporting files included.
+        self.assertIn("delete the whole `<slug>/` directory", flat(self.body))
+        self.assertIn("not just `SKILL.md`", flat(self.body))
 
     def test_reports_referrers_rather_than_cascading_the_deletion(self):
         # The section used to instruct removing "derived entries" - other

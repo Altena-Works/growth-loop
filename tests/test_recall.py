@@ -1,5 +1,7 @@
+import os
 import pathlib
 import shutil
+import time
 import unittest
 
 from fixtures import load_script, run, tmpdir, write_transcript
@@ -67,6 +69,53 @@ class TestRecall(unittest.TestCase):
         combined = out + err
         self.assertIn("CLAUDE_TRANSCRIPT_DIR", combined)
         self.assertIn(str(empty), combined)
+
+    def test_cap_is_announced_with_an_accurate_unread_count(self):
+        # The headline change of a whole round shipped with no test. The
+        # count must be sessions *read*, not sessions that matched: using
+        # the latter reported nearly every transcript as unread on any
+        # selective query, and that number is the sole basis for deciding
+        # how far to raise --max.
+        # Back-date explicitly: the search reads newest first, so the count
+        # only means anything against a known order.
+        aged = self.root / "projects" / "aged"
+        plan = [("quiet-0", "nothing here", 1), ("quiet-1", "nothing here", 2),
+                ("hit-0", "NEEDLEWORD a", 3), ("hit-1", "NEEDLEWORD b", 4),
+                ("hit-2", "NEEDLEWORD c", 5), ("hit-3", "NEEDLEWORD d", 6)]
+        for name, text, age in plan:
+            path = write_transcript(aged / (name + ".jsonl"),
+                                    user_text=text, assistant_text="ok")
+            stamp = time.time() - age * 86400
+            os.utime(path, (stamp, stamp))
+        # Two quiet sessions read, then two hits fill --max 2 at index 4 of
+        # 6 aged files. Anything the setUp fixture adds is newer than all of
+        # them, so it is read first and counted in index too.
+        code, out, _ = run("gl-recall", ["NEEDLEWORD", "--max", "2"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("stopped at the --max limit of 2", out)
+        tail = out[out.index("stopped at the"):]
+        self.assertIn("2 older session(s) were not read", tail,
+                      "the count must be sessions read, not sessions matched")
+
+    def test_cap_filled_on_the_last_session_still_announces(self):
+        # Silence there is byte-identical to an exhausted search, which is
+        # the one thing this plugin says a truncation must never look like.
+        path = write_transcript(self.root / "projects" / "r" / "dense.jsonl",
+                                user_text="NEEDLEWORD one",
+                                assistant_text="NEEDLEWORD two")
+        # Oldest, so nothing remains unread once the cap fills on it — the
+        # branch that used to print nothing at all.
+        stamp = time.time() - 300 * 86400
+        os.utime(path, (stamp, stamp))
+        code, out, _ = run("gl-recall", ["NEEDLEWORD", "--days", "365",
+                                         "--max", "1"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("stopped at the --max limit", out)
+
+    def test_an_exhausted_search_says_nothing_about_the_cap(self):
+        code, out, _ = run("gl-recall", ["ECONNREFUSED", "--max", "50"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertNotIn("stopped at the --max limit", out)
 
     def test_max_flag_caps_output(self):
         for i in range(10):

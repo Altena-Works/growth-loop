@@ -1,6 +1,6 @@
 ---
 name: journey
-description: Reviews everything the learning loop has accumulated - skills, memory files, the nudge ledger - and forces a verdict on each stale item. Run this deliberately, about monthly, or when the skill library has grown past the point where you can name what is in it. Review is a human decision, so this skill is never invoked automatically.
+description: Reviews everything the learning loop has accumulated - skills, memory files, the nudge ledger - and forces a verdict on every stale skill. Run this deliberately, about monthly, or when the skill library has grown past the point where you can name what is in it. Review is a human decision, so this skill is never invoked automatically.
 disable-model-invocation: true
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
@@ -83,9 +83,17 @@ match the same task mean the wrong one sometimes wins; a description vague
 enough to match nothing in particular means none of them fire and the task
 gets redone from scratch instead of recalled.
 
-A description that mis-targets is `/growth-loop:refine`'s "fixing the
-description" case — route it there and say so in the report, rather than
-letting the audit end as an observation nobody acts on.
+What to do with what you find. An overlap where two descriptions both
+plausibly claim the same task is a targeting error with both files in
+front of you — that is `/growth-loop:refine`, the same evidence standard a
+merge meets. Route it there and say so in the report, rather than letting
+the audit end as an observation nobody acts on.
+
+A description merely vague enough that nothing fires is not that. Nothing
+has gone wrong yet; you are predicting one will. `refine` declines
+speculative polish on purpose, so do not send it there — name it in the
+report as a weakness to watch, and let the next real miss be the evidence
+that triggers the correction.
 
 ## Report
 
