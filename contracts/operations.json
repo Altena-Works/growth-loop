@@ -1,0 +1,49 @@
+{
+  "operations": {
+    "learn": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["real_work", "recurrence", "procedural_value"],
+      "forbidden": ["overwrite_existing_skill", "write_without_dead_end"],
+      "writes": ["skill"]
+    },
+    "refine": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["session_failure", "review_overlap", "review_merge"],
+      "forbidden": ["hedge_a_wrong_step", "delete_a_skill"],
+      "writes": ["skill"]
+    },
+    "recall": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["user_reference_to_past_work"],
+      "forbidden": ["dump_raw_output"],
+      "writes": []
+    },
+    "profile": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["second_occurrence"],
+      "forbidden": ["persist_dishonesty", "remove_a_line", "announce_the_write"],
+      "writes": ["profile"]
+    },
+    "journey": {
+      "invokers": ["user"],
+      "accepts_evidence": ["deliberate_review"],
+      "forbidden": ["delete_directly"],
+      "writes": []
+    },
+    "forget": {
+      "invokers": ["user"],
+      "accepts_evidence": ["explicit_user_request"],
+      "forbidden": ["delete_without_showing", "cascade_to_referrers"],
+      "writes": ["deletion"]
+    }
+  },
+  "routes": [
+    {"from": "learn",   "to": "refine",  "evidence": "review_overlap"},
+    {"from": "refine",  "to": "forget",  "evidence": "explicit_user_request"},
+    {"from": "journey", "to": "refine",  "evidence": "review_merge"},
+    {"from": "journey", "to": "refine",  "evidence": "review_overlap"},
+    {"from": "journey", "to": "forget",  "evidence": "explicit_user_request"},
+    {"from": "recall",  "to": "profile", "evidence": "second_occurrence"},
+    {"from": "profile", "to": "forget",  "evidence": "explicit_user_request"}
+  ]
+}
