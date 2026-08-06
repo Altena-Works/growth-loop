@@ -1,3 +1,4 @@
+import pathlib
 import shutil
 import unittest
 
@@ -88,19 +89,23 @@ class TestRecall(unittest.TestCase):
         self.assertTrue(clip("d" * 500, 200).endswith("..."))
         self.assertEqual(len(clip("d" * 500, 200)), 203)
 
-    def test_list_roots_survives_an_unreadable_subtree(self):
-        blocked = self.root / "projects" / "locked"
-        blocked.mkdir(parents=True)
-        (blocked / "x.jsonl").write_text("{}\n", encoding="utf-8")
-        blocked.chmod(0o000)
-        try:
-            code, out, err = run("gl-recall", ["--list-roots"], env=self.env)
-            self.assertEqual(code, 0)
-            self.assertEqual(err.strip(), "")
-            self.assertIn(str(self.root), out)
-        finally:
-            blocked.chmod(0o755)
+    def test_jsonl_files_survives_an_error_while_iterating(self):
+        # The previous version of this test chmod-ed a subtree to 000 and
+        # asserted the CLI still exited 0. It could not fail: pathlib's
+        # rglob swallows PermissionError internally, so no version of the
+        # code — including one with the guard deleted entirely — ever
+        # reached an exception path. Drive the failure directly instead.
+        jsonl_files = load_script("gl-recall").jsonl_files
 
+        class Exploding:
+            def rglob(self, pattern):
+                yield pathlib.Path("/one.jsonl")
+                raise OSError("filesystem went away mid-walk")
+
+        self.assertEqual(list(jsonl_files(Exploding())),
+                         [pathlib.Path("/one.jsonl")],
+                         "an error while iterating must stop the walk, not "
+                         "propagate and not lose what was already found")
 
 if __name__ == "__main__":
     unittest.main()

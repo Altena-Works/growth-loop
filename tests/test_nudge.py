@@ -179,6 +179,21 @@ class TestNudge(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("hookSpecificOutput", out)
 
+    def test_non_numeric_last_nudge_does_not_silence_the_hook_forever(self):
+        # read_state()'s dict guard does not cover a dict carrying a truthy
+        # non-numeric value: float() raises, the top-level guard swallows
+        # it, record() never runs, and the file is never rewritten - the
+        # same permanent silence the dict guard was added to prevent.
+        (self.home / "nudge-state.json").write_text(
+            '{"last_nudge": "2026-08-06T10:00:00"}', encoding="utf-8")
+        code, out, err = run("gl-nudge", [], env=self.env,
+                             stdin=hook_payload(self.heavy, "Stop"))
+        self.assertEqual(code, 0)
+        self.assertEqual(err.strip(), "")
+        self.assertIn("hookSpecificOutput", out)
+        state = json.loads((self.home / "nudge-state.json").read_text())
+        self.assertIsInstance(state.get("last_nudge"), float)
+
 
 if __name__ == "__main__":
     unittest.main()

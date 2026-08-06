@@ -325,6 +325,17 @@ class TestJourneySkill(unittest.TestCase):
             self.assertIn(verdict, self.body.lower())
         self.assertIn("no undecided leftovers", self.body.lower())
 
+    def test_duplicate_merge_does_not_reach_deletion(self):
+        # The Delete verdict's "recommendation, not an action" scope covers
+        # only items --stale surfaced. Duplicates are found in the full
+        # inventory, so a merge instruction whose second half is removing
+        # the loser reached deletion around forget entirely.
+        index = self.body.index("## Duplicates")
+        section = self.body[index:self.body.index("## Audit")]
+        self.assertIn("recommend the loser for deletion and stop", section)
+        self.assertIn("Do not delete it here", section)
+        self.assertIn("cannot call", section)
+
     def test_audits_the_description_set(self):
         self.assertIn("would exactly the right one fire", self.body)
 

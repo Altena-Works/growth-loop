@@ -169,7 +169,16 @@ def main():
     if not transcript or not Path(transcript).is_file():
         return 0
 
-    if time.time() - float(read_state().get("last_nudge", 0) or 0) < COOLDOWN_SECONDS:
+    # A dict carrying a truthy non-numeric last_nudge (a hand-edited ISO
+    # timestamp, say) raises here. read_state()'s dict guard does not cover
+    # it, and the top-level guard would swallow the error before record()
+    # rewrites the file — leaving this environment permanently silent, the
+    # same end state that guard exists to prevent, one level down.
+    try:
+        last = float(read_state().get("last_nudge", 0) or 0)
+    except (TypeError, ValueError):
+        last = 0.0
+    if time.time() - last < COOLDOWN_SECONDS:
         return 0
 
     calls, edits, files = measure(transcript)

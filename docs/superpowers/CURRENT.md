@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **108/108 pass**（`python3 tests/run.py`）
+- テスト **123/123 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 108テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 123テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -180,6 +180,18 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 | `learn` にディレクトリ | README から実際の行き止まりを抽出してテンプレート準拠で生成、`gl-journey` も認識 |
 
 この一巡で3件の欠陥が出た。下の「繰り越した指摘の処理」と、`gl-journey` の呼び出し回数主張・列崩れ・`skill-author` のテンプレート欠落。
+
+### 3巡目のスイープ（2026-08-06）
+
+2巡目の修正を検証させたところ7件、さらにもう一巡させて4件出た。重いもの:
+
+- **`--locate` の前方一致が全クエリに効いていた。** 「一覧が名前を28文字で切るから切り詰め形も受ける」つもりの実装が、`--locate deploy` を `deploy-staging` に解決していた。完全一致しないクエリが miss 分岐を素通りして、`forget` の Show に「検証済みの1件」の顔で到達する — この命令が置き換えるはずだった推測そのもの。末尾が `...` のときだけ前方一致するよう限定
+- **`journey` の重複統合が `forget` のゲートを迂回していた。** Delete 判定の「これは推奨であって実行ではない」は `--stale` が挙げた項目にしか掛かっておらず、重複は全在庫から拾うので範囲外。「統合せよ」の後半は負けた側の削除であり、locate も show も confirm もされない。統合は前半（`refine` で内容を吸収）のみ実行し、負けた側は推奨して止まる形に
+- **`gl-nudge` の cooldown 読み出しが数値でない値で落ちていた。** `read_state()` の dict 検査は通るが `float("2026-08-06T10:00:00")` が例外。最上位ガードが飲み込み `record()` に到達しないので、その環境では nudge が恒久的に無言 — dict 検査が防いだはずの終状態に一段下で到達していた
+
+**そしてテスト自身の問題が2件。** `test_list_roots_survives_an_unreadable_subtree` は空洞だった（`pathlib.rglob` が `PermissionError` を内部で握り潰すので、ガードを完全に削除してもテストが通る）。関数を直接呼んで反復中の例外を起こす形に置き換えた。`load_script` の環境 sanitise も**インポート時にしか効いておらず**、`home()` は呼び出し時に `os.environ` を読むので実際には無防備だった。呼び出しを囲む `clean_env()` を追加。
+
+この2巡で、直した挙動には全て pin を付け、**1件ずつ修正を戻して落ちることを確認した**。行折り返しでアサーション文字列が割れる罠に2度かかったので、命令文は1行に収めてある。
 
 ### 最終スイープで出た欠陥（2026-08-06）
 

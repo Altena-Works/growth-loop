@@ -132,7 +132,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Inventory skills and memory produced by the learning loop.")
     parser.add_argument("--stale", type=int, default=None,
-                        help="show only assets older than N days")
+                        help="filter the SKILLS section to entries older than "
+                             "N days; MEMORY and LEDGER always print in full")
     parser.add_argument("--paths", action="store_true",
                         help="print the resolved write targets and exit")
     parser.add_argument("--locate", metavar="NAME",
@@ -147,12 +148,17 @@ def main():
         # the same slug can exist under more than one root, where a guess
         # deletes the wrong one and the confirmation certifies it.
         #
-        # Match the clipped form too. The listing is what the caller reads,
-        # so requiring the full name here would make a name longer than
-        # NAME_CHARS unreachable from the only view that names it.
-        query = args.locate.rstrip(".")
+        # Match the clipped form too — the listing is what the caller reads,
+        # so requiring the full name would make anything longer than
+        # NAME_CHARS unreachable from the only view that names it. But only
+        # then: a bare prefix must not match. `--locate deploy` resolving to
+        # deploy-staging would sail past the miss branch and reach forget's
+        # Show step looking like a verified hit, which is the guess this
+        # command exists to replace.
+        clipped = args.locate.endswith("...")
+        query = args.locate[:-3] if clipped else args.locate
         hits = [path.parent for name, path, _ in collect_skills()
-                if name == args.locate or name.startswith(query)]
+                if name == args.locate or (clipped and query and name.startswith(query))]
         for directory in hits:
             # The directory, not its SKILL.md: forget deletes the whole
             # <slug>/ tree including supporting files, and showing only the

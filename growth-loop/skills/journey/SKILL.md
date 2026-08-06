@@ -52,6 +52,21 @@ the better **What goes wrong** section, not the newer one: the dead ends it
 documents are the irreplaceable part, and a newer skill that has not yet
 failed at anything has nothing there to lose.
 
+A merge has two halves and you perform only the first. Fold what the loser
+has that the keeper lacks into the keeper — that is a correction, so route
+it through `/growth-loop:refine`.
+Then **recommend the loser for deletion and stop.** Do not delete it here.
+
+Removing it yourself would destroy a skill that was never located, never
+shown and never confirmed, in the middle of a review the user asked for —
+the same thing `forget` exists to make impossible, reached from a section
+that never mentions it. `forget` is user-invoked only and you cannot call
+it; name the directory and let them.
+
+Until they do, the merge is incomplete and the duplication is worse than
+before, because the keeper now covers ground the loser still claims. Say
+that plainly in the report rather than leaving it implied.
+
 ## Audit the description set
 
 Read every skill's description together, as a set, not one at a time. A
@@ -66,7 +81,7 @@ gets redone from scratch instead of recalled.
 
 Give a short verdict, not the inventory. The user already ran `gl-journey`
 and can see the raw listing themselves; what this review owes them is the
-decisions it produced — what is recommended for deletion and why, what got corrected, what got
-kept and why, and any duplicates merged. Restating the table `gl-journey`
-already printed tells them nothing they did not have before running this
-skill.
+decisions it produced — what is recommended for deletion and why, what got
+corrected, what got kept and why, and any duplicates folded together with
+the loser named for deletion. Restating the table `gl-journey` already
+printed tells them nothing they did not have before running this skill.

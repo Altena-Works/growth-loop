@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from fixtures import run, tmpdir, write_skill
+from fixtures import clean_env, load_script, run, tmpdir, write_skill
 
 
 class TestJourney(unittest.TestCase):
@@ -200,6 +200,18 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertEqual(code, 0, "the clipped name from the listing did not resolve")
         self.assertEqual(out.strip(), str(self.skills / long_name))
 
+    def test_locate_does_not_resolve_a_bare_prefix(self):
+        # Prefix matching exists only so the clipped name from the listing
+        # resolves. Applied to any query, `--locate deploy` would return
+        # deploy-staging, sail past the miss branch, and reach forget's
+        # Show step looking like a verified hit.
+        write_skill(self.skills / "deploy-staging" / "SKILL.md", "Deploys")
+        code, out, _ = run("gl-journey", ["--locate", "deploy"], env=self.env)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no skill named", out)
+        code, out, _ = run("gl-journey", ["--locate", "..."], env=self.env)
+        self.assertEqual(code, 1, "a query of only dots must not match everything")
+
     def test_locate_shows_every_match_rather_than_picking(self):
         write_skill(self.skills / "dup-name" / "SKILL.md", "One")
         second = tmpdir()
@@ -213,6 +225,21 @@ class TestJourneyRobustness(unittest.TestCase):
             self.assertEqual(len(out.strip().splitlines()), 2, out)
         finally:
             shutil.rmtree(second, ignore_errors=True)
+
+    def test_load_script_ignores_the_ambient_environment(self):
+        # Functions imported in-process read os.environ at call time, so an
+        # exported GROWTH_LOOP_HOME would silently steer them the way it
+        # once steered run(). Nothing loaded today reads it; this pins the
+        # sanitising before something does.
+        home = load_script("gl-journey").home
+        os.environ["GROWTH_LOOP_HOME"] = "/definitely/not/this/one"
+        try:
+            with clean_env():
+                resolved = str(home())
+        finally:
+            os.environ.pop("GROWTH_LOOP_HOME", None)
+        self.assertNotIn("/definitely/not/this/one", resolved)
+        self.assertTrue(resolved.endswith("/.claude/growth-loop"), resolved)
 
 if __name__ == "__main__":
     unittest.main()

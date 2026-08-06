@@ -94,6 +94,22 @@ class TestEnvironmentDefaults(unittest.TestCase):
                           "%s treats a set-but-empty GROWTH_LOOP_HOME as an "
                           "override, resolving state into the cwd" % name)
 
+    def test_state_is_stamped_before_the_ledger_is_appended(self):
+        """The ordering carries the anti-habituation guarantee.
+
+        If the ledger append succeeds and the state write then fails, the
+        message still prints but last_nudge was never persisted, so the next
+        heavy session fires again well inside the cooldown. A partial-write
+        failure cannot be provoked from a test, so the ordering is pinned at
+        the source — the code comment already says not to reorder it.
+        """
+        source = (BIN / "gl-nudge").read_text()
+        body = source[source.index("def record("):source.index("def message(")]
+        self.assertLess(body.index("nudge-state.json"), body.index("ledger.jsonl"),
+                        "record() appends to the ledger before stamping the "
+                        "cooldown; a failed state write then leaves the nudge "
+                        "firing inside its own cooldown window")
+
 
 if __name__ == "__main__":
     unittest.main()

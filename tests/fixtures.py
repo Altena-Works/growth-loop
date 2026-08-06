@@ -1,4 +1,5 @@
 """Shared paths and fixture builders for the growth-loop test suite."""
+import contextlib
 import json
 import os
 import subprocess
@@ -49,6 +50,28 @@ def run(script, args, env=None, stdin=None):
     return proc.returncode, proc.stdout, proc.stderr
 
 
+SCRIPT_ENV_VARS = ("CLAUDE_TRANSCRIPT_DIR", "GROWTH_LOOP_HOME",
+                   "GROWTH_LOOP_SKILL_ROOTS")
+
+
+@contextlib.contextmanager
+def clean_env():
+    """Run a block with the scripts' env vars unset, then restore them.
+
+    run() strips these for subprocesses. A function imported via
+    load_script() runs in this process and reads os.environ when called, so
+    it needs the same clean slate at call time — sanitising only around the
+    import looks protective and is not.
+    """
+    saved = {k: os.environ.pop(k, None) for k in SCRIPT_ENV_VARS}
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is not None:
+                os.environ[key] = value
+
+
 def load_script(name):
     """Import a bin/ script as a module so its functions can be unit-tested.
 
@@ -66,11 +89,11 @@ def load_script(name):
     # which is the backstop; this line is what prevents the damage.
     previous = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
-    # run() strips these because an ambient value silently changes what the
-    # scripts resolve. A function imported here reads os.environ at call
-    # time, so it needs the same clean slate.
-    saved = {k: os.environ.pop(k, None) for k in
-             ("CLAUDE_TRANSCRIPT_DIR", "GROWTH_LOOP_HOME", "GROWTH_LOOP_SKILL_ROOTS")}
+    # Sanitise for the import itself, in case a module ever reads the
+    # environment at module level. This does NOT protect a function called
+    # later — those read os.environ when called, not when imported. Use
+    # clean_env() around the call for that.
+    saved = {k: os.environ.pop(k, None) for k in SCRIPT_ENV_VARS}
     loader = importlib.machinery.SourceFileLoader(
         name.replace("-", "_"), str(BIN / name))
     spec = importlib.util.spec_from_loader(loader.name, loader)
