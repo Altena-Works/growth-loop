@@ -1,6 +1,6 @@
 # growth-loop — 現状
 
-最終更新: 2026-08-05
+最終更新: 2026-08-06
 
 ## これは何か
 
@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **89/89 pass**（`python3 tests/run.py`）
+- テスト **99/99 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,13 +65,13 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 89テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 99テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
 ```
 
-永続状態は `~/.claude/growth-loop/`（`profile.md` / `ledger.jsonl` / `nudge-state.json`）、`GROWTH_LOOP_HOME` で差し替え可能。蒸留されたスキルは `~/.claude/skills/<slug>/SKILL.md` に書かれる（プラグインを外しても残るように、外に置く）。
+永続状態は `~/.claude/growth-loop/`（`profile.md` / `ledger.jsonl` / `nudge-state.json`）、`GROWTH_LOOP_HOME` で差し替え可能。蒸留されたスキルの書き込み先は `gl-journey --paths` が解決する（既定は `~/.claude/skills/<slug>/SKILL.md`）。プラグインを外しても残るように、外に置いてある。
 
 ## 設計上の確定事項
 
@@ -151,10 +151,37 @@ profile: /Users/kn/.claude/growth-loop/profile.md
 - `hooks/hooks.json` はデフォルト探索位置。マニフェストに `hooks` キーを書くと conflicting-manifest エラーになる
 - transcript root は実機では `~/.claude/projects` のみ存在（3,308件）。`~/.claude/sessions` は空、他3候補は不在。自動探索は全候補を残してある
 
-## 既知の未対応（非ブロッキング）
+### 検証手順そのものがプラグインを汚す（2026-08-06）
 
-- `gl-nudge:21` のコメント末尾が「対象ファイルのゲートがあればマーカー拡張は安全」と読める。一般には偽（上記参照）。現在の挙動の記述としては正しく、仮定の話を誤っているだけ
-- `gl-nudge:31` の docstring が戻り値のリストを `[file_path, ...]` と呼んでいるが、`notebook_path` も入りうる
+仕様§7の検証手順の1番目は `python3 -m py_compile growth-loop/bin/*`。これは `bin/__pycache__/` を書き、**13ファイル厳守のプラグインに3ファイル増える**。そして `test_completeness.py` は `__pycache__` を除外して数えていたので、汚染されていても「13ファイル」と報告していた。手順どおり検証した人ほど汚れ、テストは問題なしと言う。
+
+`__pycache__` の存在自体を検査するテストを追加し、実際に汚してから落ちることを確認済み。README には書き込みを伴わない構文チェックを載せた:
+
+```bash
+python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' bin/*
+```
+
+## 繰り越した指摘の処理（2026-08-06）
+
+レビューで Minor として繰り越していた項目を一巡した。直したもの:
+
+- `gl-nudge` の `EDIT_MARKERS` コメントが「対象ファイルのゲートがあればマーカー拡張は安全」と読めた。一般には偽なので、`NotebookRead` / `Read` が対象キーを持つ具体例ごと書き直した
+- `gl-nudge` の `measure()` docstring が戻り値を `[file_path, ...]` と呼んでいた（`notebook_path` も入る）
+- `gl-nudge` の `read_state()` が dict 検証をしていなかった。`null` や `[]` が入ると `.get` が例外を投げ、最上位ガードが飲み込み、`record()` に到達しないので**その環境では nudge が恒久的に無言**になる。`isinstance` 1行で自己修復するようにし、テストで固定
+- `gl-recall` の `rglob` を包む `try/except` が何も守っていなかった（ジェネレータ生成時は例外を出さない）。反復側を包む `jsonl_files()` に集約し、`--list-roots` 側にも適用
+- `gl-recall` の `tool_use` / `tool_result` 切り詰めにマーカーが無く、切れたのか元から短いのか判別できなかった
+- `gl-journey` の未使用 `import json`
+- `gl-journey` の `description_of()` が `description:` を列0でしか拾わず、インデントされた frontmatter を `(no description)` に落としていた
+- `journey` スキルが `--stale` の適用範囲（SKILLS のみ、MEMORY と LEDGER は常に全件）を書いていなかった。実セッションで、モデルがメモリファイルを stale 項目と誤認しかけていた
+
+**意図的に残したもの:**
+
+- `gl-recall` の argparse 使用法エラーが exit 2 を返す — argparse の標準挙動で、スキルは誤用経路を通らない
+- `test_constraints.py` のガードが AST でなく行正規表現 — 3スクリプト13ファイルの規模に対して過剰
+- `learn` の「session has been long」に閾値が無い — 委譲判断であって、偽の精度を与えるほうが害が大きい
+- `learn` の `$ARGUMENTS` にディレクトリ/URL の判定規則が無い — モデルが自明に判別できる
+- `recall` の "a later session usually supersedes an earlier one" — 確率的事実の記述で、no-hedging が禁じる「動かないかもしれない手順」とは別物
+- `profile` の Conventions と Working style の切り分け規準 — 隣の節に入っても損害が無い
 
 ## 次にやるなら
 

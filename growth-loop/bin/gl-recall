@@ -58,15 +58,25 @@ def discover_roots():
     return roots
 
 
+def jsonl_files(root):
+    """Yield every *.jsonl under root, surviving an unreadable subtree.
+
+    rglob() is a generator function: calling it never raises, so guarding the
+    call guards nothing. Anything that goes wrong surfaces while iterating,
+    which is what this wraps.
+    """
+    try:
+        for path in root.rglob("*.jsonl"):
+            yield path
+    except OSError:
+        return
+
+
 def transcripts(roots, days):
     cutoff = time.time() - days * 86400
     found = []
     for root in roots:
-        try:
-            files = root.rglob("*.jsonl")
-        except OSError:
-            continue
-        for f in files:
+        for f in jsonl_files(root):
             try:
                 mtime = f.stat().st_mtime
             except OSError:
@@ -75,6 +85,11 @@ def transcripts(roots, days):
                 found.append((mtime, f))
     found.sort(key=lambda pair: pair[0], reverse=True)   # newest session first
     return found
+
+
+def clip(text, limit):
+    """Truncate with a visible marker, so a cut is never read as an ending."""
+    return text if len(text) <= limit else text[:limit] + "..."
 
 
 def block_text(content):
@@ -92,12 +107,13 @@ def block_text(content):
             parts.append(str(block.get("text", "")))
         elif kind == "tool_use":
             raw = json.dumps(block.get("input", {}), ensure_ascii=False)
-            parts.append("[%s] %s" % (block.get("name", "tool"), raw[:TOOL_INPUT_CHARS]))
+            parts.append("[%s] %s" % (block.get("name", "tool"),
+                                      clip(raw, TOOL_INPUT_CHARS)))
         elif kind == "tool_result":
             body = block.get("content")
             if not isinstance(body, str):
                 body = json.dumps(body, ensure_ascii=False)
-            parts.append("[result] " + body[:TOOL_RESULT_CHARS])
+            parts.append("[result] " + clip(body, TOOL_RESULT_CHARS))
     return "\n".join(p for p in parts if p)
 
 
@@ -161,7 +177,7 @@ def main():
 
     if args.list_roots:
         for root in roots:
-            count = sum(1 for _ in root.rglob("*.jsonl"))
+            count = sum(1 for _ in jsonl_files(root))
             print("%s  (%d transcript(s))" % (root, count))
         return 0
 

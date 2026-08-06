@@ -91,11 +91,22 @@ this one. If you edit plugin files while a session is already running, run
 claude plugin validate .               # manifest + frontmatter + hooks schema
 ./bin/gl-recall --list-roots           # must print at least one root
 ./bin/gl-journey                       # inventory
+./bin/gl-journey --paths               # the write targets learn and profile resolve
 ```
 
-Run both commands from the same directory the install block left you in —
-the inner `growth-loop/growth-loop/`, where `.claude-plugin/` and `bin/`
+Run all four from the same directory the install block left you in — the
+inner `growth-loop/growth-loop/`, where `.claude-plugin/` and `bin/`
 actually live.
+
+To syntax-check the scripts, do it without writing bytecode:
+
+```bash
+python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' bin/*
+```
+
+`python3 -m py_compile bin/*` works too, but it leaves a `__pycache__`
+directory beside the scripts — three extra files inside a plugin that is
+supposed to contain exactly thirteen.
 
 **`bin/` is not added to the Bash tool's `PATH`.** That was the plan going
 in, but measuring it in a live session showed otherwise: with only this

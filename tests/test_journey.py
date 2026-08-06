@@ -1,3 +1,4 @@
+import os
 import shutil
 import unittest
 
@@ -53,7 +54,7 @@ class TestJourney(unittest.TestCase):
         try:
             (link_root / "alias").symlink_to(self.skills)
             env = dict(self.env)
-            env["GROWTH_LOOP_SKILL_ROOTS"] = "%s:%s" % (self.skills, link_root / "alias")
+            env["GROWTH_LOOP_SKILL_ROOTS"] = os.pathsep.join([str(self.skills), str(link_root / "alias")])
             _, out, _ = run("gl-journey", [], env=env)
             self.assertEqual(out.count("fresh-thing"), 1)
         finally:
@@ -72,6 +73,52 @@ class TestJourney(unittest.TestCase):
         self.assertEqual(err.strip(), "")
         self.assertIn("SKILLS", out)
 
+
+
+class TestJourneyRobustness(unittest.TestCase):
+    """Cases the original suite left uncovered, each pinning a real fix."""
+
+    def setUp(self):
+        self.skills = tmpdir()
+        self.home = tmpdir()
+        self.env = {"GROWTH_LOOP_SKILL_ROOTS": str(self.skills),
+                    "GROWTH_LOOP_HOME": str(self.home)}
+
+    def tearDown(self):
+        shutil.rmtree(self.skills, ignore_errors=True)
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_indented_description_is_found(self):
+        # description_of() matched at column 0 only, so an indented
+        # frontmatter key reported "(no description)" on a skill that has one.
+        path = self.skills / "indented" / "SKILL.md"
+        path.parent.mkdir(parents=True)
+        path.write_text("---\n  name: indented\n  description: Indented but real\n---\n\nBody.\n",
+                        encoding="utf-8")
+        code, out, _ = run("gl-journey", [], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("Indented but real", out)
+        self.assertNotIn("(no description)", out)
+
+    def test_long_description_is_truncated_with_a_marker(self):
+        write_skill(self.skills / "verbose" / "SKILL.md", "x" * 200)
+        code, out, _ = run("gl-journey", [], env=self.env)
+        self.assertEqual(code, 0)
+        line = [l for l in out.splitlines() if "verbose" in l][0]
+        self.assertIn("...", line)
+        self.assertLess(len(line), 160)
+
+    def test_paths_reports_both_resolved_targets(self):
+        code, out, _ = run("gl-journey", ["--paths"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("skills-root: %s" % self.skills, out)
+        self.assertIn("profile: %s" % (self.home / "profile.md"), out)
+
+    def test_paths_falls_back_when_no_override_is_set(self):
+        code, out, _ = run("gl-journey", ["--paths"], env={})
+        self.assertEqual(code, 0)
+        self.assertIn("/.claude/skills", out)
+        self.assertIn("/.claude/growth-loop/profile.md", out)
 
 if __name__ == "__main__":
     unittest.main()

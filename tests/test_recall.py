@@ -75,6 +75,30 @@ class TestRecall(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("3 match(es)", out)
 
+    def test_truncated_tool_input_carries_a_marker(self):
+        # block_text() cut tool payloads at a fixed width with no marker, so a
+        # clipped value read exactly like a short one.
+        long_path = "/repo/" + ("d" * 400) + "/deep.py"
+        write_transcript(self.root / "projects" / "myrepo" / "sess-long.jsonl",
+                         user_text="unique-marker-probe", assistant_text="ok",
+                         tool_calls=1, file_paths=[long_path])
+        code, out, _ = run("gl-recall", ["Edit"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("...", out)
+
+    def test_list_roots_survives_an_unreadable_subtree(self):
+        blocked = self.root / "projects" / "locked"
+        blocked.mkdir(parents=True)
+        (blocked / "x.jsonl").write_text("{}\n", encoding="utf-8")
+        blocked.chmod(0o000)
+        try:
+            code, out, err = run("gl-recall", ["--list-roots"], env=self.env)
+            self.assertEqual(code, 0)
+            self.assertEqual(err.strip(), "")
+            self.assertIn(str(self.root), out)
+        finally:
+            blocked.chmod(0o755)
+
 
 if __name__ == "__main__":
     unittest.main()

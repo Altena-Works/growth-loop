@@ -5,7 +5,6 @@ A store that only grows becomes untrustworthy. This is the input to the
 review that decides what stays.
 """
 import argparse
-import json
 import os
 import sys
 import time
@@ -67,7 +66,10 @@ def description_of(path):
     for line in lines[1:]:
         if line.strip() == "---":
             break
-        if line.lower().startswith("description:"):
+        # strip() first: a description: key indented by a hand-edited or
+        # generator-written frontmatter block is still the description, and
+        # matching at column 0 only would report it as missing.
+        if line.strip().lower().startswith("description:"):
             return line.split(":", 1)[1].strip().strip("\"'") or "(empty)"
     return "(no description)"
 

@@ -12,6 +12,13 @@ FORBIDDEN_IMPORTS = re.compile(
 # OUT rows: never reimplement a built-in.
 FORBIDDEN_FEATURES = ("crontab", "schedule.every", "subprocess.Popen",
                       "telegram", "discord", "mcp_server", "text-to-speech")
+# The compliance constraint the spec states first and the suite never checked:
+# no OAuth token is read, extracted, proxied, or passed anywhere. Routing
+# subscription credentials through third-party tools is prohibited, so the
+# absence has to be enforced mechanically rather than assumed.
+CREDENTIAL_TOKENS = ("oauth", "access_token", "refresh_token", "api_key",
+                     "apikey", "bearer", "credential", "keychain",
+                     "ANTHROPIC_API_KEY", ".credentials.json")
 
 
 class TestHooks(unittest.TestCase):
@@ -55,6 +62,20 @@ class TestScriptConstraints(unittest.TestCase):
             for feature in FORBIDDEN_FEATURES:
                 self.assertNotIn(feature.lower(), source,
                                  "%s reimplements an OUT-row built-in" % name)
+
+    def test_nothing_touches_credentials(self):
+        # Covers the whole plugin, not just bin/: a skill body instructing the
+        # model to read a token would breach the constraint just as squarely
+        # as a script doing it.
+        targets = [BIN / name for name in SCRIPTS]
+        targets += sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md"))
+        targets += sorted((PLUGIN_ROOT / "agents").glob("*.md"))
+        targets.append(PLUGIN_ROOT / "hooks" / "hooks.json")
+        for target in targets:
+            source = target.read_text().lower()
+            for token in CREDENTIAL_TOKENS:
+                self.assertNotIn(token.lower(), source,
+                                 "%s references %r" % (target.name, token))
 
 
 if __name__ == "__main__":

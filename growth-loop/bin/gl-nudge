@@ -18,7 +18,19 @@ from pathlib import Path
 MIN_TOOL_CALLS = 25          # a session lighter than this rarely holds a skill
 MIN_EDITS = 3                # reading is not doing; require real mutation
 COOLDOWN_SECONDS = 6 * 3600  # at most one nudge per 6h, shared by both events
-EDIT_MARKERS = ("edit", "write", "create", "str_replace")  # substrings, matched case-insensitively against tool names — necessary but not sufficient: measure() only counts the call as an edit when its input also names a target under file_path or notebook_path, so TodoWrite (matches "write", names neither) does not count while MultiEdit (file_path) and NotebookEdit (notebook_path) both do; widen the marker list and more tool names match "edit"-shaped without necessarily naming a target, so the file_path/notebook_path gate is what keeps that widening from firing the nudge on sessions that only looked heavy; narrow it and real work gets missed
+# Substrings matched case-insensitively against tool names. A match is
+# necessary but not sufficient: measure() counts the call only when the
+# input also names a target under file_path or notebook_path. So TodoWrite
+# matches "write", names no target, and does not count; MultiEdit and
+# NotebookEdit both name one and do.
+#
+# Widening this list is not made safe by that gate. The gate rejects tools
+# that name no target — it says nothing about read-only tools that do.
+# NotebookRead carries notebook_path and Read carries file_path; both are
+# excluded today only because their names contain no marker. Add "read" or
+# "notebook" here and pure reading counts as editing at full weight.
+# Narrowing it instead misses real work.
+EDIT_MARKERS = ("edit", "write", "create", "str_replace")
 
 DEFAULT_HOME = "~/.claude/growth-loop"  # where ledger/state live if unset; changing loses continuity with prior installs
 
@@ -28,7 +40,10 @@ def home():
 
 
 def measure(path):
-    """Return (tool_calls, edits, [file_path, ...]) from a transcript."""
+    """Return (tool_calls, edits, [target, ...]) from a transcript.
+
+    A target is whichever of file_path or notebook_path the tool named.
+    """
     calls = edits = 0
     files = []
     try:
@@ -80,10 +95,16 @@ def measure(path):
 
 
 def read_state():
+    # A non-dict here (null, a list, a bare number) would make the caller's
+    # .get() raise. The top-level guard would swallow that and exit 0, but
+    # record() is never reached, so the state file never gets rewritten and
+    # the nudge stays silent in that environment for good. Treat anything
+    # that is not a dict as absent, so the next fire repairs the file.
     try:
-        return json.loads((home() / "nudge-state.json").read_text(encoding="utf-8"))
+        state = json.loads((home() / "nudge-state.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
+    return state if isinstance(state, dict) else {}
 
 
 def record(session_id, calls, edits, files):

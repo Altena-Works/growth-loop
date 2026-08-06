@@ -158,6 +158,27 @@ class TestNudge(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(err.strip(), "")
 
+    def test_corrupt_state_file_does_not_silence_the_nudge_forever(self):
+        # read_state() returned whatever JSON was in the file. A bare null or
+        # list made the caller's .get() raise, the top-level guard swallowed
+        # it, and record() was never reached — so the file never got rewritten
+        # and this environment stopped nudging permanently.
+        (self.home / "nudge-state.json").write_text("null", encoding="utf-8")
+        code, out, err = run("gl-nudge", [], env=self.env,
+                             stdin=hook_payload(self.heavy, "Stop"))
+        self.assertEqual(code, 0)
+        self.assertEqual(err.strip(), "")
+        self.assertIn("hookSpecificOutput", out)
+        state = json.loads((self.home / "nudge-state.json").read_text())
+        self.assertIn("last_nudge", state)
+
+    def test_a_list_shaped_state_file_is_also_repaired(self):
+        (self.home / "nudge-state.json").write_text("[1, 2, 3]", encoding="utf-8")
+        code, out, _ = run("gl-nudge", [], env=self.env,
+                           stdin=hook_payload(self.heavy, "Stop"))
+        self.assertEqual(code, 0)
+        self.assertIn("hookSpecificOutput", out)
+
 
 if __name__ == "__main__":
     unittest.main()

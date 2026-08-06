@@ -14,6 +14,10 @@ second narrows to what is actually due: items older than 60 days, well
 short of the 90-day staleness flag, so the review catches things before
 they have sat unexamined for a full quarter.
 
+`--stale` narrows the SKILLS section only. MEMORY and LEDGER print in full
+on both passes, so a memory file appearing in the second pass is not a
+stale item — do not open a verdict on it for that reason alone.
+
 Read both before deciding anything. The full inventory tells you what
 exists; the narrowed one tells you what needs a decision today.
 
