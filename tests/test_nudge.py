@@ -1,8 +1,10 @@
 import json
+import os
 import shutil
+import sys
 import unittest
 
-from fixtures import hook_payload, run, tmpdir, write_transcript
+from fixtures import BIN, hook_payload, run, tmpdir, write_transcript
 
 
 class TestNudge(unittest.TestCase):
@@ -178,6 +180,60 @@ class TestNudge(unittest.TestCase):
                            stdin=hook_payload(self.heavy, "Stop"))
         self.assertEqual(code, 0)
         self.assertIn("hookSpecificOutput", out)
+
+    def test_two_simultaneous_sessions_fire_once(self):
+        # The cooldown check and the state write are separated by measure(),
+        # so both processes read "no recent nudge" and both fire - two
+        # nudges inside a window that exists to allow one. Reproduced by
+        # launching them together rather than in sequence.
+        #
+        # [p.communicate(payload) for p in procs] would NOT do that: communicate()
+        # blocks until its process exits, so the first call in the list
+        # comprehension would run proc[0] to completion - including its state
+        # write - before proc[1] ever received its stdin. That serializes
+        # the two runs instead of racing them (verified empirically: with
+        # that pattern this test still passed 20/20 against the pre-fix,
+        # unlocked gl-nudge). Feeding both stdins - write, then close, for
+        # every process - before reading any output is what actually lets
+        # both processes run concurrently.
+        #
+        # Genuine concurrency alone is still not enough: measure() on the
+        # 30-call self.heavy transcript runs in under 100 microseconds, far
+        # narrower than the process-launch jitter between two Popen calls,
+        # so the vulnerable window closes before the second process reaches
+        # it almost every time (confirmed empirically: still 0/10 races
+        # against the unlocked gl-nudge with self.heavy). A transcript large
+        # enough to make measure() take tens of milliseconds widens that
+        # window past typical launch jitter, which reproduced the race
+        # 10/10 in the same experiment.
+        import subprocess
+        race_transcript = write_transcript(
+            self.work / "race.jsonl", "do a big migration", "done",
+            tool_calls=20000,
+            file_paths=["/r/a.py", "/r/b.py", "/r/c.py", "/r/d.py"])
+        payload = hook_payload(race_transcript, "Stop")
+        procs = [
+            subprocess.Popen(
+                [sys.executable, str(BIN / "gl-nudge")],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, text=True,
+                env={**os.environ, "GROWTH_LOOP_HOME": str(self.home)})
+            for _ in range(2)
+        ]
+        for p in procs:
+            p.stdin.write(payload)
+            p.stdin.close()
+        outs = [(p.stdout.read(), p.stderr.read()) for p in procs]
+        for p in procs:
+            p.wait()
+            p.stdout.close()
+            p.stderr.close()
+        self.assertTrue(all(p.returncode == 0 for p in procs))
+        fired = [o for o, _ in outs if o.strip()]
+        self.assertEqual(len(fired), 1, "both processes fired: %r" % outs)
+        entries = [l for l in (self.home / "ledger.jsonl").read_text().splitlines()
+                   if l.strip()]
+        self.assertEqual(len(entries), 1)
 
     def test_non_numeric_last_nudge_does_not_silence_the_hook_forever(self):
         # read_state()'s dict guard does not cover a dict carrying a truthy
