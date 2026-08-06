@@ -185,8 +185,15 @@ own distilled skills. Override the sweep with `GROWTH_LOOP_SKILL_ROOTS`, an
 | `MIN_TOOL_CALLS` | `bin/gl-nudge` | 25 | Minimum tool calls before the nudge fires |
 | `MIN_EDITS` | `bin/gl-nudge` | 3 | Minimum mutating calls — reading is not doing |
 | `COOLDOWN_SECONDS` | `bin/gl-nudge` | 21600 | At most one nudge per 6h, shared by both events |
-| `STALE_DAYS` | `bin/gl-journey` | 90 | Age at which an asset needs a verdict |
+| `STALE_DAYS` | `bin/gl-journey` | 90 | Age at which a skill is flagged `STALE` in the listing |
+| `--stale 60` | `skills/journey/SKILL.md` | 60 | Age at which the monthly review forces a verdict |
 | `SNIPPET_CHARS` | `bin/gl-recall` | 400 | Window around each transcript match |
+
+Those two ages are separate knobs, and only the second one drives the
+review: `STALE_DAYS` controls the `STALE` flag in the listing, while the
+verdict `journey` forces comes from the `--stale 60` it runs. Raising
+`STALE_DAYS` alone changes what the table looks like and nothing about what
+gets decided — move both, or move the one you actually mean.
 
 These defaults are deliberately conservative. **The failure mode of this
 whole plugin is a nudge you learn to ignore** — once that happens, lowering

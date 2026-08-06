@@ -66,7 +66,7 @@ gets redone from scratch instead of recalled.
 
 Give a short verdict, not the inventory. The user already ran `gl-journey`
 and can see the raw listing themselves; what this review owes them is the
-decisions it produced — what got deleted, what got corrected, what got
+decisions it produced — what is recommended for deletion and why, what got corrected, what got
 kept and why, and any duplicates merged. Restating the table `gl-journey`
 already printed tells them nothing they did not have before running this
 skill.

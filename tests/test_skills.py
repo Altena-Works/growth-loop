@@ -123,7 +123,14 @@ class TestLearn(unittest.TestCase):
         self.assertIn("Do not overwrite it", self.body)
 
     def test_does_not_instruct_a_hardcoded_skills_path(self):
-        self.assertNotIn("`~/.claude/skills/<slug>/SKILL.md`", self.body)
+        # Pinning one backticked spelling let the same defect back in under
+        # any other quoting - and did, in profile's frontmatter, while the
+        # equivalent test stayed green. Check the whole file, unquoted.
+        text = self.path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.lstrip().startswith(("#", ">")) or "hardcoded" in line:
+                continue
+            self.assertNotIn("~/.claude/skills/<slug>", line, line)
 
     def test_offers_the_subagent(self):
         self.assertIn("skill-author", self.body)
@@ -222,7 +229,14 @@ class TestProfile(unittest.TestCase):
         self.assertIn("profile:", self.body)
 
     def test_does_not_instruct_a_hardcoded_profile_path(self):
-        self.assertNotIn("`~/.claude/growth-loop/profile.md`", self.body)
+        # Same shape as learn's: check the whole file including frontmatter,
+        # regardless of quoting. The description is the first path the model
+        # reads, so a literal there defeats the body's resolution rule.
+        text = (PLUGIN_ROOT / "skills" / "profile" / "SKILL.md").read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.lstrip().startswith(("#", ">")) or "GROWTH_LOOP_HOME:-" in line:
+                continue
+            self.assertNotIn("~/.claude/growth-loop/profile.md", line, line)
 
     def test_has_the_three_sections(self):
         for section in ("Tooling", "Conventions", "Working style"):
@@ -292,8 +306,14 @@ class TestForget(unittest.TestCase):
     def test_deletes_the_whole_directory(self):
         self.assertIn("<slug>/", self.body)
 
-    def test_removes_derived_entries(self):
-        self.assertIn("derived", self.body)
+    def test_reports_referrers_rather_than_cascading_the_deletion(self):
+        # The section used to instruct removing "derived entries" - other
+        # skills and profile lines that referenced the deleted one. That
+        # deleted items which were never located, never shown and never
+        # confirmed, on the authority of a yes given for something else,
+        # from inside the one skill built to be that gate.
+        self.assertIn("Report what you find. Do not delete it.", self.body)
+        self.assertIn("List the referrers and stop", self.body)
 
     def test_asks_first_on_ambiguous_scope(self):
         self.assertIn("ambiguous", self.body.lower())

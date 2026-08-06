@@ -1,7 +1,7 @@
 import shutil
 import unittest
 
-from fixtures import run, tmpdir, write_transcript
+from fixtures import load_script, run, tmpdir, write_transcript
 
 
 class TestRecall(unittest.TestCase):
@@ -76,15 +76,17 @@ class TestRecall(unittest.TestCase):
         self.assertIn("3 match(es)", out)
 
     def test_truncated_tool_input_carries_a_marker(self):
-        # block_text() cut tool payloads at a fixed width with no marker, so a
-        # clipped value read exactly like a short one.
-        long_path = "/repo/" + ("d" * 400) + "/deep.py"
-        write_transcript(self.root / "projects" / "myrepo" / "sess-long.jsonl",
-                         user_text="unique-marker-probe", assistant_text="ok",
-                         tool_calls=1, file_paths=[long_path])
-        code, out, _ = run("gl-recall", ["Edit"], env=self.env)
-        self.assertEqual(code, 0)
-        self.assertIn("...", out)
+        # Asserting "..." appears in the rendered output is worthless here:
+        # window() independently adds one whenever the snippet is not flush
+        # with the record boundary, which it never is - a version with the
+        # marker stripped from clip() still passed. Load the function and
+        # check it directly.
+        clip = load_script("gl-recall").clip
+        self.assertEqual(clip("abcdef", 10), "abcdef")
+        self.assertEqual(clip("abcdef", 6), "abcdef")
+        self.assertEqual(clip("abcdef", 4), "abcd...")
+        self.assertTrue(clip("d" * 500, 200).endswith("..."))
+        self.assertEqual(len(clip("d" * 500, 200)), 203)
 
     def test_list_roots_survives_an_unreadable_subtree(self):
         blocked = self.root / "projects" / "locked"

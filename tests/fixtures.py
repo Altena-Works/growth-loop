@@ -36,6 +36,10 @@ def run(script, args, env=None, stdin=None):
     environ = dict(os.environ)
     environ.pop("CLAUDE_TRANSCRIPT_DIR", None)
     environ.pop("GROWTH_LOOP_HOME", None)
+    # Left ambient, this makes every gl-journey test depend on whatever the
+    # operator has exported - including the fallback tests, which would then
+    # assert a fallback they never exercised.
+    environ.pop("GROWTH_LOOP_SKILL_ROOTS", None)
     if env:
         environ.update(env)
     proc = subprocess.run(
@@ -43,6 +47,32 @@ def run(script, args, env=None, stdin=None):
         input=stdin, capture_output=True, text=True, env=environ,
     )
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def load_script(name):
+    """Import a bin/ script as a module so its functions can be unit-tested.
+
+    The scripts have no .py extension, and testing a pure function only
+    through rendered CLI output hides regressions: a truncation marker
+    dropped from clip() stayed invisible because a second code path emits
+    the same characters.
+    """
+    import importlib.machinery
+    import importlib.util
+    # Executing the module writes a __pycache__ next to the script, which is
+    # three extra files inside a plugin that must hold exactly thirteen.
+    # test_completeness catches it, but only after the damage is on disk.
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    loader = importlib.machinery.SourceFileLoader(
+        name.replace("-", "_"), str(BIN / name))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    try:
+        loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
 
 
 def tmpdir():

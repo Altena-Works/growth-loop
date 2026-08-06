@@ -152,5 +152,32 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertNotEqual(profile.strip(), "profile: profile.md")
         self.assertIn("/.claude/growth-loop/profile.md", profile)
 
+    def test_separator_only_roots_still_resolve_to_a_scanned_root(self):
+        # An override of nothing but separators filtered down to no roots,
+        # and --paths then named a write target collect_skills() never
+        # scanned - the exact desync the resolution exists to prevent.
+        env = {"GROWTH_LOOP_SKILL_ROOTS": os.pathsep, "GROWTH_LOOP_HOME": str(self.home)}
+        code, out, err = run("gl-journey", ["--paths"], env=env)
+        self.assertEqual(code, 0, err)
+        root = [l for l in out.splitlines() if l.startswith("skills-root:")][0]
+        root = root.split(":", 1)[1].strip()
+        self.assertTrue(root.endswith("/.claude/skills"), root)
+        # and the sweep reads that same root rather than nothing
+        code, listing, _ = run("gl-journey", [], env=env)
+        self.assertEqual(code, 0)
+        self.assertIn("SKILLS", listing)
+
+    def test_locate_prints_the_full_path(self):
+        write_skill(self.skills / "findable" / "SKILL.md", "A findable skill")
+        code, out, _ = run("gl-journey", ["--locate", "findable"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), str(self.skills / "findable" / "SKILL.md"))
+
+    def test_locate_reports_a_miss_without_inventing_a_path(self):
+        code, out, _ = run("gl-journey", ["--locate", "absent-skill"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("no skill named", out)
+        self.assertNotIn("absent-skill/SKILL.md", out)
+
 if __name__ == "__main__":
     unittest.main()

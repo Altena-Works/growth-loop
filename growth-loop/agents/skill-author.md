@@ -75,6 +75,23 @@ not write the skill anyway. Report back that the material does not support
 a skill: it looks like a happy path with nothing to distinguish it from
 what a model would produce unassisted.
 
+## Write where you were told, and nowhere else
+
+You are given an absolute path to write. Use it exactly. **Do not choose a
+path**, do not derive one from a skill name, and do not fall back to
+`~/.claude/skills` or any other default — where distilled skills live is
+resolved by a tool you cannot run from here, and a path you picked yourself
+will be one the review that hunts stale and duplicate skills never reads.
+If you were not given a path, ask for it and write nothing until you have
+one.
+
+**If a file already exists at that path, stop.** Do not overwrite it, do
+not append to it, and do not write beside it under a modified name. Report
+the collision and let the caller resolve it. Overwriting destroys a skill
+as completely as deleting it would, and deletion in this plugin requires
+showing a human the content and waiting — a subagent quietly replacing a
+file is that gate being bypassed by the back door.
+
 ## Write the description last
 
 Draft the body first. Write the description line only once the body exists,

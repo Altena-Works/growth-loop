@@ -39,11 +39,25 @@ DESC_CHARS = 90
 # than allowed to push the age and description columns out of line, which
 # stops the listing being readable as a table at all.
 NAME_CHARS = 28
+# Column width for memory file paths. Same reason as NAME_CHARS: a deep
+# GROWTH_LOOP_HOME would otherwise push the age and size columns out of line.
+MEMORY_PATH_CHARS = 52
 
 
 def clip(text, limit):
     """Truncate with a visible marker, so a cut is never read as an ending."""
     return text if len(text) <= limit else text[:limit - 3] + "..."
+
+
+def clip_path(text, limit):
+    """Clip a path from the left, keeping the end.
+
+    A path's tail carries the filename and the directory that names it,
+    which is what identifies the row; the prefix is usually a long temp or
+    home directory shared by every row. Clipping from the right would drop
+    exactly the part the reader is looking for.
+    """
+    return text if len(text) <= limit else "..." + text[-(limit - 3):]
 
 
 def home():
@@ -58,7 +72,11 @@ def home():
 def skill_roots():
     override = os.environ.get("GROWTH_LOOP_SKILL_ROOTS")
     sources = override.split(os.pathsep) if override else SKILL_ROOTS
-    return [Path(s).expanduser() for s in sources if s]
+    roots = [Path(s).expanduser() for s in sources if s]
+    # An override of nothing but separators filters down to no roots at all.
+    # Returning that would let --paths name a write target this sweep never
+    # reads, which is the exact desync the resolution exists to prevent.
+    return roots or [Path(SKILL_ROOTS[0]).expanduser()]
 
 
 def age_days(path):
@@ -117,7 +135,24 @@ def main():
                         help="show only assets older than N days")
     parser.add_argument("--paths", action="store_true",
                         help="print the resolved write targets and exit")
+    parser.add_argument("--locate", metavar="NAME",
+                        help="print the full path of every skill with this "
+                             "name, across all roots, and exit")
     args = parser.parse_args()
+
+    if args.locate:
+        # forget has to show the user the exact path it is about to delete.
+        # The SKILLS listing prints the directory name only, and clips it at
+        # NAME_CHARS, so reconstructing a path from it means guessing — and
+        # the same slug can exist under more than one root, where a guess
+        # deletes the wrong one and the confirmation certifies it.
+        hits = [path for name, path, _ in collect_skills() if name == args.locate]
+        for path in hits:
+            print(path)
+        if not hits:
+            print("no skill named %r under: %s"
+                  % (args.locate, ", ".join(str(r) for r in skill_roots())))
+        return 0
 
     if args.paths:
         # The skills that write have to land where this script reads, and a
@@ -126,8 +161,7 @@ def main():
         # policies, and a hardcoded path desynchronises the moment anyone
         # overrides the roots. So resolution happens here, once, and both
         # sides read the same answer.
-        roots = skill_roots()
-        print("skills-root: %s" % (roots[0] if roots else Path(SKILL_ROOTS[0]).expanduser()))
+        print("skills-root: %s" % skill_roots()[0])
         print("profile: %s" % (home() / "profile.md"))
         return 0
 
@@ -153,8 +187,9 @@ def main():
             stat = target.stat()
         except OSError:
             continue
-        print("  %-52s %5s  %d bytes"
-              % (target, "%dd" % int(age_days(target)), stat.st_size))
+        print("  %-*s %5s  %d bytes"
+              % (MEMORY_PATH_CHARS, clip_path(str(target), MEMORY_PATH_CHARS),
+                 "%dd" % int(age_days(target)), stat.st_size))
 
     print("\nLEDGER")
     print("=" * 6)

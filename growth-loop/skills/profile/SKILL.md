@@ -1,6 +1,6 @@
 ---
 name: profile
-description: Maintains a cross-project model of the person at ~/.claude/growth-loop/profile.md - their tooling, conventions, and working style. Use when a stated preference recurs for the second time, when the user corrects the same class of thing again, or when the nudge hook reports a heavy session. CLAUDE.md describes the project; this describes the person and travels between repos.
+description: Maintains a cross-project model of the person - their tooling, conventions, and working style - in a profile file kept outside any repository. Use when a stated preference recurs for the second time, when the user corrects the same class of thing again, or when the nudge hook reports a heavy session. CLAUDE.md describes the project; this describes the person and travels between repos.
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
@@ -71,9 +71,18 @@ re-suggesting the thing that was already tried and moved away from.
 
 ## Size
 
-Cap the file at about 60 lines. When it grows past that, age out the
-entries that were never reinforced: an unreinforced line is a guess that
-survived by inertia, not a pattern that held up.
+Cap the file at about 60 lines. When it grows past that, the entries to
+drop are the ones that were never reinforced: an unreinforced line is a
+guess that survived by inertia, not a pattern that held up.
+
+**Propose those lines. Do not remove them here.** Show the candidates and
+the reason each one looks unreinforced, then stop — removal goes through
+`/growth-loop:forget`, which shows the literal line and waits for a human.
+Deleting them here would reach that same effect from a skill the model can
+invoke on its own, in a section that ends by telling you not to announce
+what you did. A line that turns out to have mattered would be gone with
+nobody having seen it go. The never-announce rule below covers writing a
+line, not removing one.
 
 ## What never goes in
 

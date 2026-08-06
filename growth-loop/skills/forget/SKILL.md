@@ -14,6 +14,19 @@ specific profile line. If the reference is by topic rather than by name
 `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey` and match against its listing
 instead of guessing from memory.
 
+Then get the exact path from the tool, never by reconstructing one:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --locate <name>
+```
+
+The listing prints directory names, clipped, with no path and no indication
+of which root they came from — and the same name can exist under more than
+one root, where a project-local skill shadows a user one. Reconstructing a
+path from that listing is a guess, and the confirmation step would certify
+the guess. If `--locate` prints more than one line, that is the ambiguity
+below: ask which one.
+
 If the scope is ambiguous — several matches, or it is unclear whether the
 user means a skill or a profile line — ask before touching anything. A
 wrong guess here deletes the wrong thing, and there is no undo.
@@ -59,8 +72,20 @@ as history, that is profile's job, not this skill's.
 
 ## Follow the references
 
-A deleted item rarely stands alone. Remove derived entries that depended on
-it: profile lines that only made sense alongside the thing just deleted,
-and other skills whose bodies point at it by name or route to it. A
-reference to a skill that no longer exists is a dead end the next reader
-has to discover the hard way, at the exact moment they are relying on it.
+A deleted item rarely stands alone. A reference to a skill that no longer
+exists is a dead end the next reader discovers at the exact moment they are
+relying on it, so find them: profile lines that only made sense alongside
+the thing just deleted, and other skills whose bodies point at it by name
+or route to it.
+
+**Report what you find. Do not delete it.** The confirmation you were given
+covers the one target that was located and shown, and nothing else. Deleting
+a second skill because the first one mentioned it would destroy something
+the user never saw and never agreed to — using their "yes" to one thing as
+authority over another. That is the gate this whole skill exists to be, and
+it would be defeated from the inside.
+
+List the referrers and stop. A dangling reference is a correction —
+`/growth-loop:refine` on the referring skill — not another deletion. If one
+of them genuinely should go too, it comes back through this skill from the
+top: located, shown, confirmed on its own.

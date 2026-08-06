@@ -2,7 +2,7 @@
 name: learn
 description: Distils a reusable skill from work that just finished, when a task took real effort to get right and the same problem will come back. Use when the user says "remember how to do this", "write that down", or "make a skill for this"; when a multi-step procedure has just succeeded after several failed attempts; or when the nudge hook reports a heavy session. Takes an optional target - a directory or URL - and otherwise distils this conversation.
 argument-hint: "[directory-or-url]"
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*), Bash(echo:*), Bash(cut:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
 
 ## First: check for overlap
@@ -116,6 +116,16 @@ the document rather than writing it inline — this keeps the distillation
 work out of the main session's context. Hand it the facts directly: what
 was attempted, what failed and why, and what finally worked. It writes the
 document; you do not need to draft it first.
+
+**Do the two checks above yourself and hand over their results**, because
+the subagent cannot repeat them: it has no `${CLAUDE_PLUGIN_ROOT}` to
+resolve, so it cannot run `gl-journey --paths` and cannot see whether the
+target already exists. Give it the resolved absolute path to write, and
+confirm that path is free before dispatching. Delegation is triggered by a
+long session — exactly when the resolved path is least likely to still be
+in view — so leaving either check to the subagent is how the delegated
+branch ends up writing to a hardcoded root, or over a skill that was
+already there.
 
 ## Reporting
 
