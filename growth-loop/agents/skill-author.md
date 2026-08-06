@@ -77,9 +77,9 @@ what a model would produce unassisted.
 
 ## Write where you were told, and nowhere else
 
-You are given an absolute path to write. Use it exactly. **Do not choose a
-path**, do not derive one from a skill name, and do not fall back to
-`~/.claude/skills` or any other default — where distilled skills live is
+You are given an absolute path to write. Use it exactly.
+**Do not choose a path.** Do not derive one from a skill name, and do not
+fall back to `~/.claude/skills` or any other default — where distilled skills live is
 resolved by a tool you cannot run from here, and a path you picked yourself
 will be one the review that hunts stale and duplicate skills never reads.
 If you were not given a path, ask for it and write nothing until you have

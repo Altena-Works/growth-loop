@@ -78,6 +78,9 @@ guess that survived by inertia, not a pattern that held up.
 **Propose those lines. Do not remove them here.** Show the candidates and
 the reason each one looks unreinforced, then stop — removal goes through
 `/growth-loop:forget`, which shows the literal line and waits for a human.
+You cannot invoke that skill: it is user-invoked only, precisely so that
+nothing removes a line without a person seeing it go. Present the
+candidates and leave the command to them.
 Deleting them here would reach that same effect from a skill the model can
 invoke on its own, in a section that ends by telling you not to announce
 what you did. A line that turns out to have mattered would be gone with

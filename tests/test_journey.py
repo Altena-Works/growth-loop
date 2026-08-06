@@ -156,28 +156,63 @@ class TestJourneyRobustness(unittest.TestCase):
         # An override of nothing but separators filtered down to no roots,
         # and --paths then named a write target collect_skills() never
         # scanned - the exact desync the resolution exists to prevent.
+        # The old --paths branch had its own inline fallback, so asserting
+        # on --paths alone passed against the defect. What was broken is that
+        # collect_skills() scanned nothing while --paths named a root, so
+        # plant a skill in the fallback root's place and assert the sweep
+        # actually reads the root --paths reports.
         env = {"GROWTH_LOOP_SKILL_ROOTS": os.pathsep, "GROWTH_LOOP_HOME": str(self.home)}
         code, out, err = run("gl-journey", ["--paths"], env=env)
         self.assertEqual(code, 0, err)
-        root = [l for l in out.splitlines() if l.startswith("skills-root:")][0]
-        root = root.split(":", 1)[1].strip()
-        self.assertTrue(root.endswith("/.claude/skills"), root)
-        # and the sweep reads that same root rather than nothing
-        code, listing, _ = run("gl-journey", [], env=env)
-        self.assertEqual(code, 0)
-        self.assertIn("SKILLS", listing)
+        reported = [l for l in out.splitlines()
+                    if l.startswith("skills-root:")][0].split(":", 1)[1].strip()
+        code, listing, _ = run("gl-journey", ["--locate", "anything-at-all"], env=env)
+        self.assertEqual(code, 1)
+        self.assertIn(reported, listing,
+                      "the sweep does not read the root --paths reports")
 
-    def test_locate_prints_the_full_path(self):
+    def test_locate_prints_the_directory_that_gets_deleted(self):
+        # forget deletes the whole <slug>/ tree including supporting files.
+        # Printing only SKILL.md would show the user less than gets removed.
         write_skill(self.skills / "findable" / "SKILL.md", "A findable skill")
+        (self.skills / "findable" / "reference.md").write_text("x", encoding="utf-8")
         code, out, _ = run("gl-journey", ["--locate", "findable"], env=self.env)
         self.assertEqual(code, 0)
-        self.assertEqual(out.strip(), str(self.skills / "findable" / "SKILL.md"))
+        self.assertEqual(out.strip(), str(self.skills / "findable"))
 
     def test_locate_reports_a_miss_without_inventing_a_path(self):
         code, out, _ = run("gl-journey", ["--locate", "absent-skill"], env=self.env)
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 1, "a miss must be distinguishable by status")
         self.assertIn("no skill named", out)
         self.assertNotIn("absent-skill/SKILL.md", out)
+
+    def test_locate_accepts_the_clipped_name_the_listing_prints(self):
+        # The listing clips at NAME_CHARS, and forget is told to match
+        # against that listing. Requiring the full name here would make any
+        # skill with a longer name unreachable from the only view naming it.
+        long_name = "reindex-search-after-schema-change"
+        write_skill(self.skills / long_name / "SKILL.md", "Long-named skill")
+        _, listing, _ = run("gl-journey", [], env=self.env)
+        shown = [l for l in listing.splitlines() if "reindex" in l][0]
+        clipped = shown.strip().split()[0]
+        self.assertTrue(clipped.endswith("..."), clipped)
+        code, out, _ = run("gl-journey", ["--locate", clipped], env=self.env)
+        self.assertEqual(code, 0, "the clipped name from the listing did not resolve")
+        self.assertEqual(out.strip(), str(self.skills / long_name))
+
+    def test_locate_shows_every_match_rather_than_picking(self):
+        write_skill(self.skills / "dup-name" / "SKILL.md", "One")
+        second = tmpdir()
+        try:
+            write_skill(second / "dup-name" / "SKILL.md", "Two")
+            env = dict(self.env)
+            env["GROWTH_LOOP_SKILL_ROOTS"] = os.pathsep.join(
+                [str(self.skills), str(second)])
+            code, out, _ = run("gl-journey", ["--locate", "dup-name"], env=env)
+            self.assertEqual(code, 0)
+            self.assertEqual(len(out.strip().splitlines()), 2, out)
+        finally:
+            shutil.rmtree(second, ignore_errors=True)
 
 if __name__ == "__main__":
     unittest.main()

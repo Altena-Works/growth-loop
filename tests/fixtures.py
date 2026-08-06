@@ -61,9 +61,16 @@ def load_script(name):
     import importlib.util
     # Executing the module writes a __pycache__ next to the script, which is
     # three extra files inside a plugin that must hold exactly thirteen.
-    # test_completeness catches it, but only after the damage is on disk.
+    # test_completeness cannot catch it — discovery is alphabetical, so it
+    # runs before this does. tests/run.py re-checks after the whole suite,
+    # which is the backstop; this line is what prevents the damage.
     previous = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
+    # run() strips these because an ambient value silently changes what the
+    # scripts resolve. A function imported here reads os.environ at call
+    # time, so it needs the same clean slate.
+    saved = {k: os.environ.pop(k, None) for k in
+             ("CLAUDE_TRANSCRIPT_DIR", "GROWTH_LOOP_HOME", "GROWTH_LOOP_SKILL_ROOTS")}
     loader = importlib.machinery.SourceFileLoader(
         name.replace("-", "_"), str(BIN / name))
     spec = importlib.util.spec_from_loader(loader.name, loader)
@@ -72,6 +79,9 @@ def load_script(name):
         loader.exec_module(module)
     finally:
         sys.dont_write_bytecode = previous
+        for key, value in saved.items():
+            if value is not None:
+                os.environ[key] = value
     return module
 
 

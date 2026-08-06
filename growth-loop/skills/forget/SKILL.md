@@ -14,7 +14,8 @@ specific profile line. If the reference is by topic rather than by name
 `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey` and match against its listing
 instead of guessing from memory.
 
-Then get the exact path from the tool, never by reconstructing one:
+**For a skill**, get the exact path from the tool, never by reconstructing
+one:
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --locate <name>
@@ -24,8 +25,24 @@ The listing prints directory names, clipped, with no path and no indication
 of which root they came from — and the same name can exist under more than
 one root, where a project-local skill shadows a user one. Reconstructing a
 path from that listing is a guess, and the confirmation step would certify
-the guess. If `--locate` prints more than one line, that is the ambiguity
-below: ask which one.
+the guess. Paste the clipped name straight from the listing if that is all
+you have; `--locate` matches the clipped form too.
+
+It prints the directory, which is what gets deleted. Read its output:
+
+- **One line.** That is the target. Use it verbatim.
+- **More than one line.** The name is ambiguous — that is the case below.
+  Show the user every path and ask which one, naming what distinguishes
+  them. Never pick.
+- **`no skill named …`, exit 1.** Nothing matched. Say so and stop. Do not
+  fall back to a path you assembled yourself — that is the guess this
+  command exists to replace, and it would arrive at the confirmation step
+  looking exactly like a verified one.
+
+**For a profile line**, this command does not apply: it looks up skills, so
+a profile entry will always come back as a miss. Resolve the file with
+`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths` and read the `profile:`
+line, then find the literal line inside that file.
 
 If the scope is ambiguous — several matches, or it is unclear whether the
 user means a skill or a profile line — ask before touching anything. A

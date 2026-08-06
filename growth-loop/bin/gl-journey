@@ -141,17 +141,27 @@ def main():
     args = parser.parse_args()
 
     if args.locate:
-        # forget has to show the user the exact path it is about to delete.
-        # The SKILLS listing prints the directory name only, and clips it at
+        # forget has to show the user the exact thing it is about to delete.
+        # The SKILLS listing prints the directory name only, clipped at
         # NAME_CHARS, so reconstructing a path from it means guessing — and
         # the same slug can exist under more than one root, where a guess
         # deletes the wrong one and the confirmation certifies it.
-        hits = [path for name, path, _ in collect_skills() if name == args.locate]
-        for path in hits:
-            print(path)
+        #
+        # Match the clipped form too. The listing is what the caller reads,
+        # so requiring the full name here would make a name longer than
+        # NAME_CHARS unreachable from the only view that names it.
+        query = args.locate.rstrip(".")
+        hits = [path.parent for name, path, _ in collect_skills()
+                if name == args.locate or name.startswith(query)]
+        for directory in hits:
+            # The directory, not its SKILL.md: forget deletes the whole
+            # <slug>/ tree including supporting files, and showing only the
+            # one file would confirm less than gets removed.
+            print(directory)
         if not hits:
             print("no skill named %r under: %s"
                   % (args.locate, ", ".join(str(r) for r in skill_roots())))
+            return 1
         return 0
 
     if args.paths:

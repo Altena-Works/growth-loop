@@ -92,9 +92,16 @@ claude plugin validate .               # manifest + frontmatter + hooks schema
 ./bin/gl-recall --list-roots           # must print at least one root
 ./bin/gl-journey                       # inventory
 ./bin/gl-journey --paths               # the write targets learn and profile resolve
+./bin/gl-journey --locate <name>       # the directory a named skill lives in
 ```
 
-Run all four from the same directory the install block left you in — the
+`--locate` is what `forget` uses to get an exact path instead of assembling
+one from the listing, which prints clipped names and no paths. It accepts
+the clipped form as shown, prints every match across all roots so a
+shadowed skill cannot be deleted by mistake, and exits 1 when nothing
+matches so a miss is distinguishable from a hit.
+
+Run the first four from the same directory the install block left you in — the
 inner `growth-loop/growth-loop/`, where `.claude-plugin/` and `bin/`
 actually live.
 

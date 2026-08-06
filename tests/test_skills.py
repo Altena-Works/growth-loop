@@ -135,6 +135,24 @@ class TestLearn(unittest.TestCase):
     def test_offers_the_subagent(self):
         self.assertIn("skill-author", self.body)
 
+    def test_hands_the_subagent_the_results_of_both_write_checks(self):
+        # skill-author cannot repeat them: no ${CLAUDE_PLUGIN_ROOT}, so no
+        # --paths and no existence check. Delegation fires on a long session,
+        # which is exactly when the resolved path has fallen out of view.
+        index = self.body.index("## Delegating")
+        section = self.body[index:]
+        self.assertIn("hand over their results", section)
+        self.assertIn("resolved absolute path", section)
+        self.assertIn("confirm that path is free", section)
+
+    def test_grants_only_the_script_it_actually_runs(self):
+        # It carried Bash(echo:*) and Bash(cut:*) left over from a removed
+        # shell-expansion form. Every other grant here pins one exact script.
+        allowed = self.meta.get("allowed-tools", "")
+        self.assertIn("gl-journey", allowed)
+        for stray in ("echo", "cut"):
+            self.assertNotIn("Bash(%s:" % stray, allowed)
+
     def test_takes_arguments(self):
         self.assertIn("$ARGUMENTS", self.body)
 
@@ -173,6 +191,17 @@ class TestSkillAuthorAgent(unittest.TestCase):
 
     def test_refuses_dead_end_free_skills(self):
         self.assertIn("What goes wrong", self.body)
+
+    def test_refuses_to_choose_its_own_write_path(self):
+        # It has no ${CLAUDE_PLUGIN_ROOT}, so it cannot run gl-journey
+        # --paths. Left to pick, the delegated branch writes to a hardcoded
+        # root the review never reads - the defect learn had just been fixed
+        # for, reintroduced through the subagent.
+        self.assertIn("Do not choose a path", self.body)
+        self.assertIn("ask for it and write nothing", self.body)
+
+    def test_refuses_to_overwrite_an_existing_file(self):
+        self.assertIn("If a file already exists at that path, stop.", self.body)
 
     def test_carries_the_same_template_learn_uses(self):
         # skill-author is the delegated path for the job learn does inline.
@@ -248,6 +277,21 @@ class TestProfile(unittest.TestCase):
     def test_states_the_second_occurrence_rule(self):
         self.assertIn("second occurrence", self.body)
 
+    def test_age_out_is_proposal_only(self):
+        # The cap used to say "age out the entries that were never
+        # reinforced" in a model-invocable skill whose closing rule is not
+        # to announce the write - reaching, silently, the effect forget
+        # requires showing the line and waiting for a human to reach.
+        self.assertIn("Propose those lines. Do not remove them here.", self.body)
+        self.assertIn("/growth-loop:forget", self.body)
+
+    def test_routing_to_forget_says_the_model_cannot_invoke_it(self):
+        # refine and journey both spell this out where they route to forget.
+        # Without it, "route to forget" reads as something the model does.
+        index = self.body.index("/growth-loop:forget")
+        window = self.body[max(0, index - 400):index + 400]
+        self.assertIn("cannot invoke", window)
+
     def test_states_the_line_cap(self):
         self.assertIn("60 lines", self.body)
 
@@ -284,6 +328,13 @@ class TestJourneySkill(unittest.TestCase):
     def test_audits_the_description_set(self):
         self.assertIn("would exactly the right one fire", self.body)
 
+    def test_report_does_not_promise_deletions_it_cannot_perform(self):
+        # Routing to forget is a recommendation, not an action - stated 30
+        # lines earlier. The Report section used to ask for "what got
+        # deleted", reintroducing the framing the Delete bullet suppresses.
+        self.assertNotIn("what got deleted", self.body)
+        self.assertIn("recommended for deletion", self.body)
+
     def test_reports_a_verdict_not_the_inventory(self):
         self.assertIn("not the inventory", self.body)
 
@@ -314,6 +365,15 @@ class TestForget(unittest.TestCase):
         # from inside the one skill built to be that gate.
         self.assertIn("Report what you find. Do not delete it.", self.body)
         self.assertIn("List the referrers and stop", self.body)
+
+    def test_uses_locate_and_handles_every_outcome(self):
+        # Without a branch per outcome, a miss reads as "does not exist" and
+        # the by-topic path falls back to the reconstructed path --locate
+        # exists to replace.
+        self.assertIn("--locate", self.body)
+        for outcome in ("One line", "More than one line", "no skill named"):
+            self.assertIn(outcome, self.body)
+        self.assertIn("does not apply", self.body)   # the profile-line case
 
     def test_asks_first_on_ambiguous_scope(self):
         self.assertIn("ambiguous", self.body.lower())
