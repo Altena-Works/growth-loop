@@ -3,9 +3,11 @@
 A Claude Code plugin that closes a learning loop around your sessions: work
 finishes, knowledge gets captured as a skill or a profile entry, that capture
 gets reviewed on a schedule you control, and anything stale gets deleted
-instead of quietly accumulating. Nothing here talks to a network, reads a
-credential, or runs unattended — it exists entirely inside interactive Claude
-Code sessions.
+instead of quietly accumulating. It exists entirely inside interactive
+Claude Code sessions: nothing here reads a credential or runs unattended,
+and the three `bin/` scripts make no network calls at all. The one place a
+network is touched is `/growth-loop:learn <url>`, where you hand it a page
+to distil and Claude fetches it with its own tools.
 
 ## What it adds
 
@@ -17,7 +19,7 @@ should reach for mid-task.
 
 | Command | Invoked by | Does |
 |---|---|---|
-| `/growth-loop:learn [target]` | Claude or you | Distils a skill from work that just finished |
+| `/growth-loop:learn [dir\|url]` | Claude or you | Distils a skill from work that just finished, or from a directory or URL you name |
 | `/growth-loop:refine` | Claude or you | Corrects a skill the moment it proves wrong |
 | `/growth-loop:recall [query]` | Claude or you | Recovers reasoning from past sessions |
 | `/growth-loop:profile` | Claude or you | Maintains the cross-project model of you |
@@ -218,9 +220,11 @@ set in does not undo the habituation.
   path from first principles; what it cannot reconstruct is which plausible
   approach silently failed. That is why *What goes wrong* is a mandatory
   section, not an optional one, in every skill this loop produces.
-- **Correct at failure time, not in retrospect** (Reflexion) — `refine` fires
-  the moment a skill proves wrong during a session, while the failure is
-  fully understood, instead of waiting for a review pass to rediscover it.
+- **Correct against evidence, not recollection** (Reflexion) — `refine` fires
+  while the evidence is in front of you: usually the moment a skill proves
+  wrong during a session, with the failure still fully understood, and also
+  when a review has two overlapping skills open at once. What it never runs
+  on is a half-remembered failure or a guess.
 - **Memory needs curation, not accumulation** (Generative Agents, MemGPT) —
   `journey` and `forget` are first-class, not afterthoughts, and deletion in
   `forget` means deletion: no tombstones, no `[deprecated]` markers, nothing

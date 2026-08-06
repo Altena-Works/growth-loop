@@ -13,7 +13,7 @@ Hermes Agent (Nous Research) の「built-in learning loop」と Claude Code の�
 **実装完了、実セッションで動作検証済み。`main` にマージ済み。**
 
 - プラグインは仕様どおり**ちょうど13ファイル**（`tests/test_completeness.py` が機械的に保証）
-- テスト **123/123 pass**（`python3 tests/run.py`）
+- テスト **126/126 pass**（`python3 tests/run.py`）
 - `claude plugin validate ./growth-loop` → Validation passed
 - 未コミットの変更なし
 - **push はしていない。GitHub リポジトリは未作成。**
@@ -65,7 +65,7 @@ claude/growth-loop/
 │   ├── agents/skill-author.md
 │   ├── hooks/hooks.json
 │   └── bin/{gl-recall,gl-nudge,gl-journey}
-├── tests/                  ← 123テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
+├── tests/                  ← 126テスト（出荷しない。14個目のファイルにならないよう外に置いてある）
 └── docs/superpowers/
     ├── CURRENT.md          ← これ
     └── plans/2026-08-04-growth-loop.md
@@ -180,6 +180,21 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 | `learn` にディレクトリ | README から実際の行き止まりを抽出してテンプレート準拠で生成、`gl-journey` も認識 |
 
 この一巡で3件の欠陥が出た。下の「繰り越した指摘の処理」と、`gl-journey` の呼び出し回数主張・列崩れ・`skill-author` のテンプレート欠落。
+
+### 4巡目 — 契約修正が届いていなかった層（2026-08-06）
+
+前項の `refine` の契約修正は**本文しか直していなかった**。残っていたのは:
+
+- **`description`。これが起動を決める層である。** モデルが `refine` を呼ぶか判断するのは description を読んだ時点で、本文はまだ読み込まれていない。そして実際に起きた不具合は「起動の拒否」だった。つまり修正が、直そうとした機構そのものに届いていなかった。旧文面は `Correct at failure time, never as a retrospective.` のままで、定例レビューを明示的に排除していた
+- `## The procedure` の「このセッションで起きたことに照らして検証せよ」
+- `## When to write nothing` の「間違ってはいないなら編集不要」。統合の keeper は「間違っている」のではなく「欠けている」ので、`journey` が回してきた案件をこの規則が弾きうる
+- README の設計ノートが旧契約を説明したまま
+
+あわせて README 冒頭の「Nothing here talks to a network」も偽だった。`learn` に URL を渡す分岐が仕様として存在する（`bin/` がネットワークを使わないのは真で、そちらの記述は正しい）。冒頭の断定と、コマンド表に URL 形式が出ていない点の両方を修正。
+
+**`--stale` の適用範囲にも pin が無かった。** SKILLS 以降を打ち切る改変を入れてもテストが通った。ヘルプ文と `journey` の本文が両方主張している保証で、しかも実セッションで一度誤読が起きている箇所だったにもかかわらず。
+
+教訓として記録する: **スキルの description は本文とは別に検証が要る。** 本文だけ直しても、起動判断はそこを読まない。
 
 ### journey と refine の契約矛盾（2026-08-06、実セッションで露見）
 

@@ -172,6 +172,23 @@ class TestRefine(unittest.TestCase):
         self.assertIn("/growth-loop:forget", self.body)
         self.assertIn("beyond repair", self.body)
 
+    def test_the_description_admits_review_driven_corrections(self):
+        # The description is the gate: it is what a model reads to decide
+        # whether to invoke at all, before the body loads. The live failure
+        # was a refusal to invoke, so loosening only the body left the fix
+        # short of the mechanism that produced the bug.
+        description = self.meta["description"]
+        self.assertNotIn("never as a retrospective", description)
+        self.assertIn("evidence", description)
+        self.assertIn("review", description)
+
+    def test_declining_polish_does_not_decline_a_merge(self):
+        # "not actually wrong, needs no edit" can fire on the exact case
+        # journey routes here: a keeper is not wrong, it is missing what
+        # the loser documents.
+        index = self.body.index("## When to write nothing")
+        self.assertIn("does not decline a merge", self.body[index:])
+
     def test_fires_on_evidence_not_recency(self):
         # journey routes a duplicate merge here, but the old rule said
         # "only on something that happened this session" - so a live review

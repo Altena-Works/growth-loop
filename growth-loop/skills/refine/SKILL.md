@@ -1,6 +1,6 @@
 ---
 name: refine
-description: Corrects a stored skill the moment it proves wrong in use - a step that failed, an assumption that no longer holds, a better route found, or a description that fired at the wrong time. Use when following a skill produced an error, when a documented command no longer exists, or when the right skill did not fire for an obviously matching task. Correct at failure time, never as a retrospective.
+description: Corrects a stored skill against evidence in front of you - a step that failed, an assumption that no longer holds, a better route found, a description that fired at the wrong time, or a duplicate whose content has to be folded into the skill that supersedes it. Use when following a skill produced an error, when a documented command no longer exists, when the right skill did not fire for an obviously matching task, or when a review puts two overlapping skills side by side. Correct on evidence, never on a hunch.
 ---
 
 ## When this fires
@@ -32,8 +32,9 @@ you fix might already be referenced, hedged around, or contradicted three
 sections down, and you will not see that until a future reader does.
 
 Then make the smallest correct edit — replace the wrong step, wrong flag,
-or wrong claim with the one that actually works, verified against what just
-happened in this session.
+or wrong claim with the one that actually works, verified against the
+evidence that brought you here: what just happened in this session, or the
+other skill open beside this one.
 
 Then append a dated entry under `## Revisions` stating what changed **and
 why**:
@@ -87,3 +88,8 @@ A skill that was merely unhelpful — vague, slower than it needed to be, not
 quite matching this session's flavor of the task — but not actually wrong,
 needs no edit. Do not churn a skill just because it could be phrased
 better; refine corrects errors, it does not polish prose.
+
+Missing is not the same as merely unhelpful. A keeper that lacks the dead
+end its duplicate documents **is** wrong for the reader who follows it into
+that dead end, so folding one in is a correction, not polish — this rule
+does not decline a merge routed here by `/growth-loop:journey`.

@@ -241,5 +241,18 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertNotIn("/definitely/not/this/one", resolved)
         self.assertTrue(resolved.endswith("/.claude/growth-loop"), resolved)
 
+    def test_stale_filters_skills_only_not_memory_or_ledger(self):
+        # Both the --stale help text and journey/SKILL.md assert this, and a
+        # live session had already misread a memory file as a stale item
+        # before the skill said so. Nothing pinned it: dropping MEMORY and
+        # LEDGER from the filtered pass left the suite green.
+        write_skill(self.skills / "recent" / "SKILL.md", "Written today")
+        _, out, _ = run("gl-journey", ["--stale", "60"], env=self.env)
+        self.assertIn("(none)", out, "the skill should have been filtered out")
+        for section in ("MEMORY", "LEDGER"):
+            self.assertIn(section, out,
+                          "%s must print in full on a filtered pass" % section)
+        self.assertIn("nudge(s) recorded", out)
+
 if __name__ == "__main__":
     unittest.main()
