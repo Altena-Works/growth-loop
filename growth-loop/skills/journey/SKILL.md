@@ -72,8 +72,20 @@ that plainly in the report rather than leaving it implied.
 Read the descriptions **from the files**, not from the listing. The listing
 clips each one at 90 characters, which cuts the "use when …" clause — and
 that clause is the entire basis for the question below. Judging from the
-clipped form is judging with the evidence removed. Open each `SKILL.md` and
-read its frontmatter.
+clipped form is judging with the evidence removed.
+
+The listing gives you names, not paths — and clipped ones at that. Resolve
+each to a file before opening it:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --locate <name as the listing prints it>
+```
+
+It accepts the clipped form and prints the directory, across every root.
+Do not glob the `skills-root:` from `--paths` instead: that reports the
+first root only, so on a machine with more than one you would audit a
+subset of the set you just listed and answer the question below wrong by
+construction. Open each `SKILL.md` and read its frontmatter.
 
 Read them together, as a set, not one at a time. A description that looks
 fine in isolation can still overlap the neighbor it

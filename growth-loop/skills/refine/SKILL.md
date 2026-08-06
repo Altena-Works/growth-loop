@@ -53,6 +53,15 @@ re-introducing the old step because it looked reasonable in isolation.
 
 ## Fixing the description
 
+If a review found two descriptions that both plausibly claim the same
+task, the fix is the opposite shape: **narrow one of them** so it stops
+claiming what the other owns, rather than broadening either. Decide which
+skill genuinely owns the task, edit that one's neighbour, and put the
+`## Revisions` entry in the file you edited — the one whose description
+changed, not the one that kept its scope. Nothing fired wrongly yet, so
+there is no situation to name; what you are recording is which of the two
+now owns the overlap, and why.
+
 If the failure was *targeting* — the skill did not fire when it should
 have, or fired on a task it does not cover — the body is fine and the
 description is the bug. Rewrite the description to name the exact situation

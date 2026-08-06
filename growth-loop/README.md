@@ -74,10 +74,12 @@ at `growth-loop/bin/` relative to the repo root, not at the root itself — so
 `cd` into the inner `growth-loop/` before touching `chmod` or pointing
 `--plugin-dir` anywhere.
 
-`chmod +x` is not boilerplate. The `Stop` hook invokes
-`"${CLAUDE_PLUGIN_ROOT}"/bin/gl-nudge` directly by path; without the
-executable bit it still fails to launch and the nudge silently never fires
-— there is no error, just a plugin that appears installed and does
+`chmod +x` is not boilerplate, and it is not only about the hook. The
+`Stop` hook invokes `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-nudge` directly by
+path, and five of the six skills invoke `gl-journey` or `gl-recall` the
+same way — `bin/` is not on the Bash tool's `PATH` (see Verify below), so
+every one of them runs the file directly. Without the executable bit none
+of it launches: no error, just a plugin that appears installed and does
 nothing.
 
 Note: `claude plugin init growth-loop` is not an alternative install path

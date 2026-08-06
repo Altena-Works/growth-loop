@@ -18,9 +18,15 @@ the transcript that recorded it. If the memory is old, widen the window **and ra
 `--days` alone will not reach it. The search reads newest first and stops
 at `--max` (default 25), so on any topic that comes up regularly the quota
 fills with recent sessions and the older one is never read, however far
-back the window goes. When the output ends with `stopped at the --max
-limit`, that is exactly what happened — raise `--max` and run it again
-before concluding anything about what the history holds.
+back the window goes.
+
+Any line beginning `stopped at the --max limit` means something was left
+out, and it says which: **older session(s) were not read** — the case
+above, where the window never got that far back — or **every session in
+the window was read** but further matches inside them were not printed.
+Raise `--max` and run it again before concluding anything about what the
+history holds. No such line means the search was complete; do not re-run
+it looking for more.
 
 If the first pass comes back thin, widen the query with the concrete strings
 that would actually appear in a transcript — error text, filenames, command

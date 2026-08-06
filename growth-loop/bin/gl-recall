@@ -187,34 +187,39 @@ def main():
     pattern = build_pattern(args.query)
     hits = 0
     sessions = 0
-    capped = False
+    # What was actually lost, tracked separately: whole sessions never
+    # opened, and matches found inside a session but not printed. Reporting
+    # a cut that did not happen is the same defect as hiding one — an
+    # exhausted search whose count lands exactly on --max must stay silent,
+    # or the skill re-runs a search that was already complete and reports
+    # the history as possibly incomplete when it is not.
     unread = 0
+    dropped_within_session = False
     scanned = transcripts(roots, args.days)
     for index, (mtime, path) in enumerate(scanned):
         if hits >= args.max_hits:
-            # Sessions are ordered newest first, so stopping here means the
-            # older ones were never read. Saying so matters: the cap is what
-            # makes --days useless on its own for an old memory, because a
-            # recurring topic fills the quota with recent sessions long
-            # before the window reaches back to the one being looked for.
-            # index is how many sessions were read, matched or not.
-            # `sessions` counts only those that matched, so using it here
-            # reported nearly every transcript as unread on any selective
-            # query — and this number is the whole basis for deciding how
-            # far to raise --max.
+            # Sessions are ordered newest first, so the rest were never
+            # read. `index` is how many were, matched or not — counting only
+            # the matched ones would report nearly every transcript as
+            # unread on a selective query, and this number is the whole
+            # basis for deciding how far to raise --max.
             unread = len(scanned) - index
-            capped = unread > 0
             break
         session_hits = []
         for role, text in records(path):
             for match in pattern.finditer(text):
                 session_hits.append((role, window(text, match)))
                 break                     # one snippet per record keeps it readable
-            if hits + len(session_hits) >= args.max_hits:
+            # Collect one past the cap before stopping. Breaking exactly at
+            # it cannot distinguish "this was the last match" from "there
+            # were more", which is what made an exact fit look truncated.
+            if hits + len(session_hits) > args.max_hits:
                 break
         if not session_hits:
             continue
         room = args.max_hits - hits
+        if len(session_hits) > room:
+            dropped_within_session = True
         session_hits = session_hits[:room]
         sessions += 1
         hits += len(session_hits)
@@ -225,19 +230,14 @@ def main():
             print("  %s: %s" % (role, snippet))
 
     print("\n%d match(es) across %d session(s)" % (hits, sessions))
-    if hits >= args.max_hits:
-        # Fires whether or not sessions remain: a cap filled on the last
-        # session still dropped matches, and printing nothing there is
-        # byte-identical to an exhausted search. A cut is never read as an
-        # ending.
-        if capped:
-            print("stopped at the --max limit of %d; %d older session(s) were "
-                  "not read. Raise --max to reach further back."
-                  % (args.max_hits, unread))
-        else:
-            print("stopped at the --max limit of %d; every session in the "
-                  "window was read, but later matches inside them were "
-                  "dropped. Raise --max to see them." % args.max_hits)
+    if unread:
+        print("stopped at the --max limit of %d; %d older session(s) were "
+              "not read. Raise --max to reach further back."
+              % (args.max_hits, unread))
+    elif dropped_within_session:
+        print("stopped at the --max limit of %d; every session in the window "
+              "was read, but further matches inside them were not printed. "
+              "Raise --max to see them." % args.max_hits)
     return 0
 
 

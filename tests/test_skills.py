@@ -221,6 +221,15 @@ class TestRefine(unittest.TestCase):
         index = self.body.index("## When to write nothing")
         self.assertIn("does not decline a merge", flat(self.body[index:]))
 
+    def test_accepts_a_review_found_description_overlap(self):
+        # journey routes these here; without the trigger and the matching
+        # edit rule, refine's own text tells it to do the opposite thing
+        # (broaden to name what fired) for a case where nothing fired.
+        flattened = flat(self.body)
+        self.assertIn("A review found two descriptions that both plausibly "
+                      "claim the same task", flattened)
+        self.assertIn("**narrow one of them**", flattened)
+
     def test_fires_on_evidence_not_recency(self):
         # journey routes a duplicate merge here, but the old rule said
         # "only on something that happened this session" - so a live review
@@ -395,9 +404,17 @@ class TestJourneySkill(unittest.TestCase):
         self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --stale 60', self.body)
 
     def test_forces_a_three_way_verdict(self):
-        for verdict in ("delete", "verify", "keep"):
-            self.assertIn(verdict, self.body.lower())
-        self.assertIn("no undecided leftovers", self.body.lower())
+        # Matching bare words let two of the three bullets be deleted with
+        # the suite green - "keep" survives in "the keeper now covers
+        # ground the loser still claims". The Delete bullet is where
+        # journey's gate lives, so it is the one that must not vanish.
+        flattened = flat(self.body)
+        self.assertIn("**Delete**", flattened)
+        self.assertIn("**Verify and correct**", flattened)
+        self.assertIn("**Keep and say so**", flattened)
+        self.assertIn("a recommendation in the report, not an action you take",
+                      flattened)
+        self.assertIn("no undecided leftovers", flattened.lower())
 
     def test_duplicate_merge_does_not_reach_deletion(self):
         # The Delete verdict's "recommendation, not an action" scope covers
@@ -438,6 +455,22 @@ class TestJourneySkill(unittest.TestCase):
         # The script's behaviour is pinned in test_journey. This pins the
         # prose that tells the model to expect it.
         self.assertIn("narrows the SKILLS section only", flat(self.body))
+
+    def test_audit_routes_overlaps_but_not_predicted_vagueness(self):
+        # An overlap is evidence with both files in view; vagueness is a
+        # prediction that nothing has failed on yet, which refine declines
+        # by design. Sending both would reintroduce the contract conflict.
+        section = flat(self.body[self.body.index("## Audit the description set"):])
+        self.assertIn("Route it there and say so in the report", section)
+        self.assertIn("do not send it there", section)
+        self.assertIn("descriptions routed to refine for", section)
+
+    def test_audit_resolves_files_with_locate_not_paths(self):
+        # --paths reports the first root only, so globbing it audits a
+        # subset of the set the listing showed.
+        section = flat(self.body[self.body.index("## Audit the description set"):])
+        self.assertIn("bin/gl-journey --locate", section)
+        self.assertIn("Do not glob the `skills-root:` from `--paths`", section)
 
     def test_description_audit_reads_the_files_not_the_clipped_listing(self):
         # The listing clips descriptions at DESC_CHARS, which cuts the
@@ -498,6 +531,9 @@ class TestForget(unittest.TestCase):
         for outcome in ("One line", "More than one line", "no skill named"):
             self.assertIn(outcome, self.body)
         self.assertIn("does not apply", self.body)   # the profile-line case
+        # The listing clips names; without this the model has no way to
+        # know the clipped form it just read is a valid query.
+        self.assertIn("matches the clipped form too", flat(self.body))
 
     def test_asks_first_on_ambiguous_scope(self):
         self.assertIn("ambiguous", self.body.lower())
@@ -509,7 +545,7 @@ class TestForget(unittest.TestCase):
 
 
 class TestScriptInvocationAllowedTools(unittest.TestCase):
-    """The four skills that shell out to a bin/ script must pin an
+    """The five skills that shell out to a bin/ script must pin an
     allowed-tools rule on the same ${CLAUDE_PLUGIN_ROOT} path they invoke in
     the body, or every invocation stops for a permission prompt."""
 

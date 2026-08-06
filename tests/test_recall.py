@@ -112,6 +112,24 @@ class TestRecall(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("stopped at the --max limit", out)
 
+    def test_an_exact_fit_is_not_reported_as_a_truncation(self):
+        # The inverse of the defect above: a search whose matches land
+        # exactly on --max has dropped nothing, and saying otherwise makes
+        # recall re-run a complete search and report the history as
+        # possibly incomplete when it is not.
+        aged = self.root / "projects" / "exact"
+        for i in range(3):
+            path = write_transcript(aged / ("e%d.jsonl" % i),
+                                    user_text="WIDGETWORD here",
+                                    assistant_text="WIDGETWORD again")
+            stamp = time.time() - (10 + i) * 86400
+            os.utime(path, (stamp, stamp))
+        code, out, _ = run("gl-recall", ["WIDGETWORD", "--days", "365",
+                                         "--max", "6"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("6 match(es)", out)
+        self.assertNotIn("stopped at the --max limit", out)
+
     def test_an_exhausted_search_says_nothing_about_the_cap(self):
         code, out, _ = run("gl-recall", ["ECONNREFUSED", "--max", "50"], env=self.env)
         self.assertEqual(code, 0)
