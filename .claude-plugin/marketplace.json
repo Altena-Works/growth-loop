@@ -1,0 +1,15 @@
+{
+  "name": "growth-loop-local",
+  "owner": {
+    "name": "4ltena",
+    "url": "https://github.com/4ltena"
+  },
+  "plugins": [
+    {
+      "name": "growth-loop",
+      "source": "./growth-loop",
+      "description": "A closed learning loop for Claude Code: distil finished work into skills, refine them the moment they prove wrong, nudge you to persist what mattered, recall reasoning from past sessions, and model the person across projects.",
+      "version": "0.1.0"
+    }
+  ]
+}

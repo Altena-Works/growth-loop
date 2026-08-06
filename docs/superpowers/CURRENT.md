@@ -326,6 +326,33 @@ Minor 8件も全て処理した。うち2件はテスト自身の欠陥で、片
 - `recall` の "a later session usually supersedes an earlier one" — 確率的事実の記述で、no-hedging が禁じる「動かないかもしれない手順」とは別物
 - `profile` の Conventions と Working style の切り分け規準 — 隣の節に入っても損害が無い
 
+## 1か月の実運用（2026-08-06 開始予定）
+
+7巡目で「止めて実際に使い、実際の誤発火に証拠を出させる」を選択。散文の読み直しではなく運用が次のオラクルになる。
+
+### インストール先の注意
+
+**`~/.claude/skills/` には置かないこと。** そこは `gl-journey` の走査先なので、プラグイン自身の6スキルが棚卸し対象として並ぶ。実測では7行中6行がノイズになり、`forget` の導線もそこを指しうる。`~/.claude/plugins` を既定から外した理由と同じ問題が、インストール経路から再来する。
+
+ローカル marketplace 経由で入れる（`~/.claude/plugins/` に入り、走査対象外）:
+
+```bash
+claude plugin marketplace add /Users/kn/File/projects/claude/growth-loop
+claude plugin install growth-loop@growth-loop-local
+```
+
+リポジトリ側を編集したら `claude plugin marketplace update growth-loop-local`。
+
+### 何を見るか
+
+`~/.claude/growth-loop/ledger.jsonl` が閾値調整の証拠そのものになる。1行1発火で、`tool_calls` / `edits` / `files` が入る。
+
+- **鳴りすぎか** — 発火したのに何も捕捉しなかった回が続くなら `MIN_TOOL_CALLS` か `MIN_EDITS` を上げる。ledger の行数と、実際に `learn` / `profile` を叩いた回数を比べる
+- **鳴らなすぎか** — 「あれは記録しておくべきだった」と後から思った回。ledger に該当セッションが無ければ閾値が高い
+- **緩めるのは「鳴ってほしかった」と思ってからにする。** 慣れてしまってから締め直しても habituation は戻らない
+
+スキル側は、誤発火・不発火・指示が曖昧で迷った箇所を書き留める。それが `refine` の証拠になる。**推測で直さない** — それがこの中断の理由でもある。
+
 ## 次にやるなら
 
 1. `/hooks` の表示確認（残る唯一の未確認項目。発火自体は確認済みなので優先度は低い）
