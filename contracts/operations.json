@@ -1,0 +1,78 @@
+{
+  "operations": {
+    "learn": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["real_work", "recurrence", "procedural_value"],
+      "forbidden": [
+        "overwrite_existing_skill",
+        "write_without_dead_end",
+        "resolve_slug_collision_silently",
+        "assume_the_write_path",
+        "paste_skill_body_in_report"
+      ],
+      "writes": ["skill"]
+    },
+    "refine": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["session_failure", "session_overlap", "review_overlap", "review_merge"],
+      "forbidden": ["hedge_a_wrong_step", "delete_a_skill"],
+      "writes": ["skill"]
+    },
+    "recall": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["user_reference_to_past_work"],
+      "forbidden": [
+        "dump_raw_output",
+        "report_no_history_without_checking_roots",
+        "rerun_a_completed_search"
+      ],
+      "writes": []
+    },
+    "profile": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["second_occurrence", "person_fact", "supersession"],
+      "forbidden": [
+        "persist_dishonesty",
+        "remove_a_line",
+        "announce_the_write",
+        "assume_the_file_path",
+        "overwrite_a_line_silently",
+        "record_prohibited_or_inferred_traits",
+        "write_a_vague_placeholder"
+      ],
+      "writes": ["profile"]
+    },
+    "journey": {
+      "invokers": ["user"],
+      "accepts_evidence": ["deliberate_review"],
+      "forbidden": ["delete_directly", "leave_a_verdict_undecided", "restate_the_raw_listing"],
+      "writes": []
+    },
+    "forget": {
+      "invokers": ["user"],
+      "accepts_evidence": ["explicit_user_request"],
+      "forbidden": [
+        "reconstruct_the_target_path",
+        "pick_among_ambiguous_matches",
+        "delete_without_showing",
+        "proceed_on_implied_consent",
+        "soften_a_deletion",
+        "cascade_to_referrers"
+      ],
+      "writes": ["deletion"]
+    }
+  },
+  "routes": [
+    {"from": "learn",   "to": "refine",  "evidence": "session_overlap"},
+    {"from": "learn",   "to": "profile", "evidence": "person_fact"},
+    {"from": "refine",  "to": "forget",  "evidence": "explicit_user_request"},
+    {"from": "journey", "to": "refine",  "evidence": "review_merge"},
+    {"from": "journey", "to": "refine",  "evidence": "review_overlap"},
+    {"from": "journey", "to": "refine",  "evidence": "session_failure"},
+    {"from": "journey", "to": "forget",  "evidence": "explicit_user_request"},
+    {"from": "recall",  "to": "profile", "evidence": "second_occurrence"},
+    {"from": "profile", "to": "forget",  "evidence": "explicit_user_request"},
+    {"from": "forget",  "to": "refine",  "evidence": "session_failure"},
+    {"from": "forget",  "to": "profile", "evidence": "supersession"}
+  ]
+}

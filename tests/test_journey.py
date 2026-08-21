@@ -254,5 +254,66 @@ class TestJourneyRobustness(unittest.TestCase):
                           "%s must print in full on a filtered pass" % section)
         self.assertIn("nudge(s) recorded", out)
 
+
+class TestJourneyDuplicates(unittest.TestCase):
+    """--duplicates: a scalable first pass over descriptions.
+
+    The manual eyeball-every-pair audit in journey/SKILL.md does not scale
+    past a handful of skills. This flag surfaces a similarity-ranked
+    shortlist so the model reads two files, not the whole set, before
+    deciding anything - it never decides a merge by itself.
+    """
+
+    def setUp(self):
+        self.skills = tmpdir()
+        self.home = tmpdir()
+        self.env = {"GROWTH_LOOP_SKILL_ROOTS": str(self.skills),
+                    "GROWTH_LOOP_HOME": str(self.home)}
+
+    def tearDown(self):
+        shutil.rmtree(self.skills, ignore_errors=True)
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_flags_near_identical_descriptions_as_a_pair(self):
+        write_skill(self.skills / "deploy-staging" / "SKILL.md",
+                    "Deploy the app to the staging cluster with zero downtime")
+        write_skill(self.skills / "staging-deploy" / "SKILL.md",
+                    "Deploy the app to the staging cluster with zero downtime, twice")
+        code, out, _ = run("gl-journey", ["--duplicates"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("deploy-staging", out)
+        self.assertIn("staging-deploy", out)
+
+    def test_omits_pairs_below_the_default_threshold(self):
+        write_skill(self.skills / "deploy-staging" / "SKILL.md",
+                    "Deploy the app to the staging cluster")
+        write_skill(self.skills / "rotate-logs" / "SKILL.md",
+                    "Compress and archive old log files nightly")
+        code, out, _ = run("gl-journey", ["--duplicates"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("(none)", out)
+
+    def test_threshold_flag_widens_or_narrows_the_shortlist(self):
+        write_skill(self.skills / "deploy-staging" / "SKILL.md",
+                    "Deploy the app to staging")
+        write_skill(self.skills / "deploy-prod" / "SKILL.md",
+                    "Publish the release to production")
+        code, loose, _ = run("gl-journey", ["--duplicates", "--threshold", "0.2"],
+                             env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("deploy-staging", loose)
+        self.assertIn("deploy-prod", loose)
+        code, strict, _ = run("gl-journey", ["--duplicates", "--threshold", "0.95"],
+                              env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("(none)", strict)
+
+    def test_only_one_skill_never_crashes(self):
+        write_skill(self.skills / "lonely" / "SKILL.md", "The only skill here")
+        code, out, _ = run("gl-journey", ["--duplicates"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("(none)", out)
+
+
 if __name__ == "__main__":
     unittest.main()

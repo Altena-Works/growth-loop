@@ -1,0 +1,10 @@
+{
+  "name": "learn-writes-where-journey-reads",
+  "permission_mode": "acceptEdits",
+  "plant_skills": [],
+  "prompt": "/growth-loop:learn\n\nWe just spent this session fixing a flaky CI job. It took four failed attempts before we discovered the runner image pins an old CA bundle, so any https call to an internal service fails with a certificate error that has nothing to do with the code under test. The fix is to pass --ca-bundle /etc/ssl/internal.pem to the http client explicitly. This will keep happening on this CI image until it is rebuilt, so please save this as a skill.",
+  "expect": {
+    "exactly_one_new_skill_directory": true,
+    "journey_lists_new_skill": true
+  }
+}

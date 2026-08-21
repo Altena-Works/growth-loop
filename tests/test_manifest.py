@@ -8,9 +8,22 @@ class TestManifest(unittest.TestCase):
     def test_manifest_parses_and_has_required_fields(self):
         data = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(data["name"], "growth-loop")
-        self.assertEqual(data["version"], "0.1.0")
+        # Not a hardcoded literal: that needs editing on every release and
+        # still cannot see the marketplace entry drifting away from it.
+        self.assertRegex(data["version"], r"^\d+\.\d+\.\d+$")
         self.assertIn("description", data)
         self.assertIn("author", data)
+
+    def test_the_marketplace_entry_declares_the_same_version(self):
+        # Two manifests carry the version. A release that bumps one and not
+        # the other installs a plugin whose catalogue entry disagrees with
+        # what it actually is.
+        plugin = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())
+        market = json.loads(
+            (PLUGIN_ROOT.parent / ".claude-plugin" / "marketplace.json").read_text())
+        entries = [p for p in market["plugins"] if p["name"] == plugin["name"]]
+        self.assertEqual(len(entries), 1, market["plugins"])
+        self.assertEqual(entries[0]["version"], plugin["version"])
 
     def test_description_names_all_five_loop_stages(self):
         data = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())
