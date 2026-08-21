@@ -16,6 +16,7 @@ EXPECTED_TREE = frozenset({
     ".claude-plugin/plugin.json",
     "README.md",
     "skills/learn/SKILL.md",
+    "skills/jot/SKILL.md",
     "skills/refine/SKILL.md",
     "skills/recall/SKILL.md",
     "skills/profile/SKILL.md",
@@ -28,7 +29,7 @@ EXPECTED_TREE = frozenset({
     "bin/gl-journey",
 })
 
-MODEL_INVOKED = ("learn", "refine", "recall", "profile")
+MODEL_INVOKED = ("learn", "jot", "refine", "recall", "profile")
 USER_INVOKED_ONLY = ("journey", "forget")
 
 
@@ -83,7 +84,7 @@ def load_script(name):
     import importlib.machinery
     import importlib.util
     # Executing the module writes a __pycache__ next to the script, which is
-    # three extra files inside a plugin that must hold exactly thirteen.
+    # three extra files inside a plugin that must hold exactly fourteen.
     # test_completeness cannot catch it — discovery is alphabetical, so it
     # runs before this does. tests/run.py re-checks after the whole suite,
     # which is the backstop; this line is what prevents the damage.

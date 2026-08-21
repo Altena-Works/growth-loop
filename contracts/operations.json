@@ -2,7 +2,7 @@
   "operations": {
     "learn": {
       "invokers": ["user", "model"],
-      "accepts_evidence": ["real_work", "recurrence", "procedural_value"],
+      "accepts_evidence": ["real_work", "recurrence", "procedural_value", "candidate_promotion"],
       "forbidden": [
         "overwrite_existing_skill",
         "write_without_dead_end",
@@ -11,6 +11,18 @@
         "paste_skill_body_in_report"
       ],
       "writes": ["skill"]
+    },
+    "jot": {
+      "invokers": ["user", "model"],
+      "accepts_evidence": ["mid_session_insight"],
+      "forbidden": [
+        "write_full_skill",
+        "block_on_confirmation",
+        "duplicate_check_before_write",
+        "overwrite_the_queue",
+        "assume_the_write_path"
+      ],
+      "writes": ["candidate"]
     },
     "refine": {
       "invokers": ["user", "model"],
@@ -63,6 +75,7 @@
     }
   },
   "routes": [
+    {"from": "jot",     "to": "learn",   "evidence": "candidate_promotion"},
     {"from": "learn",   "to": "refine",  "evidence": "session_overlap"},
     {"from": "learn",   "to": "profile", "evidence": "person_fact"},
     {"from": "refine",  "to": "forget",  "evidence": "explicit_user_request"},

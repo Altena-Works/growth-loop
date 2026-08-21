@@ -2,7 +2,7 @@
   "name": "growth-loop",
   "displayName": "growth-loop",
   "version": "0.2.0",
-  "description": "A closed learning loop for Claude Code: distil finished work into skills, refine them the moment they prove wrong, nudge you to persist what mattered, recall reasoning from past sessions, and model the person across projects.",
+  "description": "A closed learning loop for Claude Code: jot a fleeting insight the instant it surfaces, distil finished work into skills, refine them the moment they prove wrong, nudge you to persist what mattered, recall reasoning from past sessions, and model the person across projects.",
   "author": {
     "name": "4ltena",
     "url": "https://github.com/4ltena"

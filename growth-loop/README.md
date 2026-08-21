@@ -11,20 +11,26 @@ to distil and Claude fetches it with its own tools.
 
 ## What it adds
 
-Six commands cover the five stages of the loop — distil, correct, recall,
-model, review — plus deletion as its own explicit step. Four are things
-Claude reaches for on your behalf during ordinary work; two are yours alone,
-because review and deletion are decisions a human makes, not defaults a model
-should reach for mid-task.
+Seven commands cover the five stages of the loop — distil, correct, recall,
+model, review — plus deletion and a lightweight capture step, each its own
+explicit thing. Five are things Claude reaches for on your behalf during
+ordinary work; two are yours alone, because review and deletion are
+decisions a human makes, not defaults a model should reach for mid-task.
 
 | Command | Invoked by | Does |
 |---|---|---|
-| `/growth-loop:learn [dir\|url]` | Claude or you | Distils a skill from work that just finished, or from a directory or URL you name |
+| `/growth-loop:jot` | Claude or you | Captures a one-line note the instant something looks worth remembering, no gate beyond "would this cost real time to reconstruct" |
+| `/growth-loop:learn [dir\|url]` | Claude or you | Distils a skill from work that just finished, from a directory or URL you name, or from pending jots |
 | `/growth-loop:refine` | Claude or you | Corrects a skill the moment it proves wrong |
 | `/growth-loop:recall [query]` | Claude or you | Recovers reasoning from past sessions |
 | `/growth-loop:profile` | Claude or you | Maintains the cross-project model of you |
 | `/growth-loop:journey` | **you only** | Monthly review with forced verdicts |
 | `/growth-loop:forget [target]` | **you only** | Deletes completely, after confirmation |
+
+`jot` is deliberately not a seventh stage of the loop — it queues raw notes
+that only become a skill once `/growth-loop:learn` applies its own gate and
+overlap check to them. Skipping that gate at capture time is the entire
+point: writing it down should never cost more than the thought did.
 
 `journey` and `forget` carry `disable-model-invocation: true` — Claude cannot
 trigger a deletion or a review on its own. Everything a model can silently
@@ -76,7 +82,7 @@ at `growth-loop/bin/` relative to the repo root, not at the root itself — so
 
 `chmod +x` is not boilerplate, and it is not only about the hook. The
 `Stop` hook invokes `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-nudge` directly by
-path, and five of the six skills invoke `gl-journey` or `gl-recall` the
+path, and six of the seven skills invoke `gl-journey` or `gl-recall` the
 same way — `bin/` is not on the Bash tool's `PATH` (see Verify below), so
 every one of them runs the file directly. Without the executable bit none
 of it launches: no error, just a plugin that appears installed and does
@@ -117,7 +123,7 @@ python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' b
 
 `python3 -m py_compile bin/*` works too, but it leaves a `__pycache__`
 directory beside the scripts — three extra files inside a plugin that is
-supposed to contain exactly thirteen.
+supposed to contain exactly fourteen.
 
 **`bin/` is not added to the Bash tool's `PATH`.** That was the plan going
 in, but measuring it in a live session showed otherwise: with only this

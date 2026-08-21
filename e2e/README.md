@@ -1,10 +1,10 @@
 # e2e — behavioural harness
 
-`e2e/` drives the real six skills in real Claude Code sessions and checks
+`e2e/` drives the real seven skills in real Claude Code sessions and checks
 what actually happened, not what the prose says should happen. It is
-separate from `tests/` (the 150-test unit suite over the skill files
-themselves) and separate from the plugin (`growth-loop/`, which must stay at
-exactly 13 files). `e2e/` ships in neither.
+separate from `tests/` (the unit suite over the skill files themselves) and
+separate from the plugin (`growth-loop/`, which must stay at exactly 14
+files). `e2e/` ships in neither.
 
 ## Why this exists
 

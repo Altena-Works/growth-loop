@@ -49,6 +49,19 @@ class TestJourney(unittest.TestCase):
         self.assertIn("LEDGER", out)
         self.assertIn("1 nudge", out)
 
+    def test_reports_pending_jot_count(self):
+        (self.home / "candidates.md").write_text(
+            "## 2026-08-21 — first\nproject: /tmp/a\nSome note.\n\n"
+            "## 2026-08-21 — second\nproject: /tmp/b\nAnother note.\n",
+            encoding="utf-8")
+        _, out, _ = run("gl-journey", [], env=self.env)
+        self.assertIn("CANDIDATES", out)
+        self.assertIn("2 pending jot", out)
+
+    def test_missing_candidates_file_reports_zero(self):
+        _, out, _ = run("gl-journey", [], env=self.env)
+        self.assertIn("0 pending jot", out)
+
     def test_dedupes_by_resolved_path(self):
         link_root = tmpdir()
         try:
@@ -113,6 +126,11 @@ class TestJourneyRobustness(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("skills-root: %s" % self.skills, out)
         self.assertIn("profile: %s" % (self.home / "profile.md"), out)
+
+    def test_paths_reports_the_candidates_target(self):
+        code, out, _ = run("gl-journey", ["--paths"], env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("candidates: %s" % (self.home / "candidates.md"), out)
 
     def test_paths_falls_back_when_no_override_is_set(self):
         code, out, _ = run("gl-journey", ["--paths"], env={})
