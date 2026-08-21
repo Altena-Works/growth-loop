@@ -21,14 +21,14 @@ if __name__ == "__main__":
     # test_completeness checks this too, but discovery runs alphabetically,
     # so it runs before any test that could import a bin/ script and leave a
     # __pycache__ behind. Checking again here — after everything has run — is
-    # what makes the 13-file guarantee hold for the run that breaks it,
+    # what makes the 14-file guarantee hold for the run that breaks it,
     # rather than for the next one.
     strays = bytecode_caches()
     if strays:
         ok = False
         sys.stderr.write(
             "\nFAIL: the suite left bytecode caches inside the plugin, which "
-            "must contain exactly 13 files:\n"
+            "must contain exactly 14 files:\n"
             + "".join("  growth-loop/%s\n" % s for s in strays)
             + "A test imported a bin/ script without suppressing bytecode. "
               "See load_script() in tests/fixtures.py.\n")

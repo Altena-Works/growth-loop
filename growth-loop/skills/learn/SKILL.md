@@ -109,6 +109,35 @@ distillation with no dead end is not worth writing — if you cannot name
 one, go back to the gate: the task probably didn't take real work after
 all.
 
+## Pending jots
+
+`/growth-loop:jot` queues raw, ungated notes mid-session without running any
+of the checks above. Those checks still have to happen somewhere, and this
+is that somewhere.
+
+Resolve the queue the same way you resolved the skills root:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths
+```
+
+Take the `candidates:` line. If that file has entries (each one a `## `
+heading), read them along with whatever prompted this invocation.
+
+For each entry, apply the exact same rules as above: the overlap check
+against existing skills, then the three-condition gate. An entry that
+passes both gets promoted through the same template and the same
+existence check as any other distillation. An entry that fails either one
+gets dropped from the queue without becoming a skill - a jot was never
+gated at write time, so this is the first and only place that judgment
+happens; leaving a rejected entry sitting in the file just means re-reading
+and re-rejecting it next time.
+
+Either way - promoted or dropped - remove that entry from `candidates.md`
+once you have decided. Edit the file to delete only that entry's block;
+leave every other pending entry untouched. A queue that only ever grows is
+the same failure mode `learn` itself exists to prevent, one level up.
+
 ## Delegating
 
 If the session has been long, dispatch the `skill-author` subagent to write
@@ -135,7 +164,8 @@ conversation — the reader can open the file if they want it.
 
 ## Handling $ARGUMENTS
 
-- `$ARGUMENTS` empty: distil this conversation.
+- `$ARGUMENTS` empty: distil this conversation, then process pending jots
+  (see above).
 - `$ARGUMENTS` a directory: read it and distil the procedure it encodes.
 - `$ARGUMENTS` a URL: fetch it and distil the procedure it describes.
 

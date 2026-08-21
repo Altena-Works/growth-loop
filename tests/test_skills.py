@@ -176,6 +176,45 @@ class TestLearn(unittest.TestCase):
         self.assertIn("a directory", section)
         self.assertIn("a URL", section)
 
+    def test_promotes_pending_jots_through_the_same_gate(self):
+        # jot queues raw, ungated notes. Something has to run learn's own
+        # checks over them before one becomes a skill, or the gate above is
+        # decorative for anything that arrived via jot instead of directly.
+        index = self.body.index("## Pending jots")
+        section = flat(self.body[index:])
+        self.assertIn("candidates:", section)
+        self.assertIn("overlap check", section)
+        self.assertIn("three-condition gate", section)
+        self.assertIn("remove that entry from", section)
+
+
+class TestJot(unittest.TestCase):
+    def setUp(self):
+        self.meta, self.body = parse_frontmatter(
+            PLUGIN_ROOT / "skills" / "jot" / "SKILL.md")
+
+    def test_resolves_the_queue_path_instead_of_hardcoding_it(self):
+        self.assertIn('"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --paths', self.body)
+        self.assertIn("candidates:", self.body)
+
+    def test_does_not_run_learns_gate(self):
+        # jot is deliberately lighter than learn: no three-condition gate,
+        # no dedup check, no confirmation before writing. Those belong to
+        # learn's promotion step, not here - jot says so explicitly rather
+        # than silently omitting them.
+        flattened = flat(self.body)
+        self.assertIn("happen later, at promotion time - not now, and not "
+                      "by this skill", flattened)
+        self.assertNotIn("Wait for confirmation", flattened)
+
+    def test_does_not_write_a_full_skill_template(self):
+        for heading in ("## When this applies", "## The approach",
+                        "## What goes wrong"):
+            self.assertNotIn(heading, self.body)
+
+    def test_never_blocks_on_confirmation(self):
+        self.assertIn("do not ask for confirmation", flat(self.body).lower())
+
 
 class TestRefine(unittest.TestCase):
     def setUp(self):
@@ -559,12 +598,13 @@ class TestForget(unittest.TestCase):
 
 
 class TestScriptInvocationAllowedTools(unittest.TestCase):
-    """The five skills that shell out to a bin/ script must pin an
+    """The six skills that shell out to a bin/ script must pin an
     allowed-tools rule on the same ${CLAUDE_PLUGIN_ROOT} path they invoke in
     the body, or every invocation stops for a permission prompt."""
 
     CASES = {
         "learn": "gl-journey",
+        "jot": "gl-journey",
         "recall": "gl-recall",
         "journey": "gl-journey",
         "forget": "gl-journey",

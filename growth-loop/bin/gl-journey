@@ -216,6 +216,7 @@ def main():
         # sides read the same answer.
         print("skills-root: %s" % skill_roots()[0])
         print("profile: %s" % (home() / "profile.md"))
+        print("candidates: %s" % (home() / "candidates.md"))
         return 0
 
     print("SKILLS")
@@ -253,6 +254,19 @@ def main():
     except OSError:
         count = 0
     print("  %d nudge(s) recorded in %s" % (count, home() / "ledger.jsonl"))
+
+    print("\nCANDIDATES")
+    print("=" * 10)
+    try:
+        # A jot is a level-2 heading ("## <date> — <title>"); counting those
+        # rather than lines gives the number of pending entries, not the
+        # number of lines they happen to span.
+        jots = sum(1 for line in
+                   (home() / "candidates.md").read_text(encoding="utf-8").splitlines()
+                   if line.startswith("## "))
+    except OSError:
+        jots = 0
+    print("  %d pending jot(s) in %s" % (jots, home() / "candidates.md"))
 
     # The spec's closing line called a never-invoked skill probably-finished
     # work. Nothing here tracks invocations — the ledger counts nudges, not
