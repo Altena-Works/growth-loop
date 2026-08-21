@@ -5,6 +5,7 @@ A store that only grows becomes untrustworthy. This is the input to the
 review that decides what stays.
 """
 import argparse
+import difflib
 import os
 import sys
 import time
@@ -45,6 +46,13 @@ NAME_CHARS = 28
 # Column width for memory file paths. Same reason as NAME_CHARS: a deep
 # GROWTH_LOOP_HOME would otherwise push the age and size columns out of line.
 MEMORY_PATH_CHARS = 52
+# Default similarity floor for --duplicates, on a 0-1 SequenceMatcher ratio
+# over description text. This is a first-pass shortlist, not a verdict — the
+# manual pairwise reading in journey/SKILL.md's Duplicates section still
+# decides whether a pair actually overlaps. Set low enough to surface
+# reworded restatements of the same task, high enough that unrelated
+# one-line descriptions don't share enough incidental words to clear it.
+DUPLICATE_THRESHOLD = 0.5
 
 
 def clip(text, limit):
@@ -142,7 +150,33 @@ def main():
     parser.add_argument("--locate", metavar="NAME",
                         help="print the full path of every skill with this "
                              "name, across all roots, and exit")
+    parser.add_argument("--duplicates", action="store_true",
+                        help="rank skill pairs by description similarity and "
+                             "exit; a shortlist for the manual overlap read, "
+                             "not a verdict")
+    parser.add_argument("--threshold", type=float, default=DUPLICATE_THRESHOLD,
+                        help="minimum similarity ratio (0-1) for --duplicates "
+                             "to report a pair (default: %s)" % DUPLICATE_THRESHOLD)
     args = parser.parse_args()
+
+    if args.duplicates:
+        skills = collect_skills()
+        pairs = []
+        for i in range(len(skills)):
+            name_a, path_a, _ = skills[i]
+            desc_a = description_of(path_a)
+            for j in range(i + 1, len(skills)):
+                name_b, path_b, _ = skills[j]
+                desc_b = description_of(path_b)
+                ratio = difflib.SequenceMatcher(None, desc_a, desc_b).ratio()
+                if ratio >= args.threshold:
+                    pairs.append((ratio, name_a, name_b))
+        pairs.sort(reverse=True)
+        if not pairs:
+            print("(none)")
+        for ratio, name_a, name_b in pairs:
+            print("%.2f  %s <-> %s" % (ratio, name_a, name_b))
+        return 0
 
     if args.locate:
         # forget has to show the user the exact thing it is about to delete.

@@ -1,6 +1,6 @@
 ---
 name: journey
-description: Reviews everything the learning loop has accumulated - skills, memory files, the nudge ledger - and forces a verdict on every stale skill. Run this deliberately, about monthly, or when the skill library has grown past the point where you can name what is in it. Review is a human decision, so this skill is never invoked automatically.
+description: Reviews everything the learning loop has accumulated - skills, memory files, the nudge ledger - and forces a verdict on every stale skill. Run this weekly - either the person invokes it directly, or a schedule they set up in advance fires it for them; either way it is never a call the model decides to make mid-conversation. Deletion stays a human decision no matter which of those triggered the run.
 disable-model-invocation: true
 allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey:*)
 ---
@@ -18,8 +18,21 @@ they have sat unexamined for a full quarter.
 on both passes, so a memory file appearing in the second pass is not a
 stale item — do not open a verdict on it for that reason alone.
 
-Read both before deciding anything. The full inventory tells you what
-exists; the narrowed one tells you what needs a decision today.
+Then run `"${CLAUDE_PLUGIN_ROOT}"/bin/gl-journey --duplicates`. Reading
+every description against every other one by eye stops scaling long before
+a library gets large enough to need this review at all — this ranks skill
+pairs by how similar their descriptions read and prints the shortlist,
+highest similarity first, or `(none)` if nothing clears the threshold.
+Treat every pair it prints as a candidate to open, not a verdict: it
+compares description text alone, so it will surface some pairs that turn
+out to describe genuinely different tasks in similar words, and it cannot
+see an overlap that happens to be phrased in dissimilar words. The
+`## Duplicates` section below still decides, with both files open.
+
+Read all three before deciding anything. The full inventory tells you what
+exists; the narrowed one tells you what needs a decision today; the
+shortlist tells you where to start looking for overlap instead of reading
+every pair in the set.
 
 ## The verdict
 
@@ -44,7 +57,8 @@ context cost is still being paid every session it stays loaded.
 
 ## Duplicates
 
-Hunt for skills covering the same ground under different names. The same
+Hunt for skills covering the same ground under different names, starting
+from the `--duplicates` shortlist gathered above. The same
 procedure described twice is worse than described once — whichever fires
 first is the one followed, correct or not, and the reader has no way to
 know a second version exists. When two overlap, merge into the one with
@@ -120,3 +134,18 @@ corrected, what got kept and why, and any duplicates folded together with
 the loser named for deletion, and any descriptions routed to refine for
 mis-targeting. Restating the table `gl-journey` already
 printed tells them nothing they did not have before running this skill.
+
+## When a schedule triggers this run
+
+A run fired by a schedule the person set up in advance follows every
+section above exactly as an interactively-invoked one does, including
+performing a confirmed merge's fold through `/growth-loop:refine` without
+pausing to ask — the person already approved that when they set up the
+schedule, not once per week. What does not change: `forget` is still
+unreachable from here, so every deletion still lands in the report as a
+named recommendation for the person to act on, never as a directory this
+run removed. Because nobody is watching the run happen, send the report
+through rather than only printing it, so a fold that turns out wrong is
+something the person catches from the notification and reverts, not
+something that sits undiscovered in the skill store until the next review
+finds it changed again.
